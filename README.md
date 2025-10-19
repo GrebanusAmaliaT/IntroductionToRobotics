@@ -8,6 +8,8 @@ Faculty of Mathematics and Computer Science, University of Bucharest
 This repository contains the laboratory homeworks completed for the Introduction to Robotics course.
 Each homework includes the official requirements, source files, implementation details, images of the physical setup, and a demonstration video.
 
+
+
 ## Homework 1 - RGB LED Control with 3 Potentiometers
 
 ### Task Requirements
