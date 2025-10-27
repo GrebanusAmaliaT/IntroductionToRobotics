@@ -7,7 +7,7 @@ const int Verde_Masini=8;
 const int Verde_Pieton=5;
 const int Rosu_Pieton=3;
 
-//buzzer si buton
+//buzzer si ;;buton
 const int Pin_Buton=2; //butonul de cerere pentru pietoni
 const int Pin_Buzzer=6;  //buzzerul pentru semnalul sonor pentru pietoni
 
@@ -106,7 +106,7 @@ void loop() {
 
 
 //Starea 1: asteapta apasarea butonului (Idle)
-  if (buton_apasat && !se_face_galben && !se_face_rosu && !warning) {
+  if (buton_apasat && !se_face_galben && !se_face_rosu && !warning && timer_start == 0) {
     buton_apasat = false; //resetez flagul
     timer_start = timer_in_prezent; //pentru a tine minte momentul apasarii
 
@@ -212,6 +212,7 @@ void loop() {
 
       idle(); //resetez sa revina la starea initiala
       timer_start = 0;
+      buton_apasat = false;
     }
   }
 }
