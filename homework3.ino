@@ -34,7 +34,7 @@ char ParolaIntrodusa[32]; //buffer pentru parola introdusa
 //parametri configurabili ai sistemului
 unsigned int distantaMax = 50; //prag sensibilitate senzor ultrasonic
 unsigned int buzzerFrecventa = 1000; //frecventa buzzerului
-unsigned int PragLDR = 0; //prag lumina pentru armare automata
+unsigned int PragLDR = 60; //prag lumina pentru armare automata
 
 //alte variabile de control
 unsigned long timer_alarmare = 0; //temporizare pentru diverse procese
@@ -43,9 +43,6 @@ int vreauAfisareMeniu = 0; //flag pentru afisare meniu principal
 bool asteaptaParolaNoua = false; //flag pasul 2 din schimbarea parolei
 
 //functie care goleste bufferul serial
-void clearSerialBuffer() {
-  while (Serial.available() > 0) Serial.read();
-}
 
 //initializare sistem
 void setup() {
@@ -74,12 +71,11 @@ void setup() {
 void afisareMeniu() {
   if (vreauAfisareMeniu == 1) {
     Serial.println("\n~~~~~~~~~~~~~~~~~~~~~ Meniul Principal ~~~~~~~~~~~~~~~~~~~~~~");
-    Serial.println("SPY CAT a spus: Buna!!! Cum te pot ajuta astazi? ^~^");
+    Serial.println("SPY CAT a spus: Buna!!! Cum te pot ajuta astazi?");
     Serial.println("1. Armare sistem");
     Serial.println("2. Setari/Configurare");
     Serial.println("3. Testare alarma");
-    Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-    Serial.println("Introdu optiunea dorita:");
+    Serial.println("~~~~~~~~~~~~~~~~~~~~~~ Introdu optiunea dorita ~~~~~~~~~~~~~~~~~~~~~");
   }
   vreauAfisareMeniu = 0; //reseteaza flagul
 }
@@ -88,14 +84,13 @@ void afisareMeniu() {
 void afisareSubmeniuSetari() {
   inSubmeniuSetari = true;
   Serial.println("\n---------------------- Setari Avansate ----------------------");
-  Serial.println("SPY CAT a spus: Ce doresti sa modifici? ^-^");
+  Serial.println("SPY CAT a spus: Ce doresti sa modifici?");
   Serial.println("1. Setare sensibilitate ultrasonic (distantaMax)");
   Serial.println("2. Setare prag lumina (PragLDR)");
   Serial.println("3. Setare frecventa buzzer (buzzerFrecventa)");
   Serial.println("4. Schimbare parola");
   Serial.println("5. Revenire la meniu principal");
-  Serial.println("-----------------------------------------------------------");
-  Serial.println("Alege optiunea:");
+  Serial.println("------------------------ Tasteaza optiunea! --------------------");
 }
 
 //functie care masoara distanta actuala
@@ -109,7 +104,8 @@ float masurareDistanta() {
 
   //citeste timpul ecoului
   unsigned long durata = pulseIn(EchoPIN, HIGH, 30000); //timeout 30ms
-  if (durata == 0) return -1; //daca nu s-a primit ecou, returneaza eroare
+  if (durata == 0) 
+    return -1; //daca nu s-a primit ecou, returneaza eroare
 
   //calculeaza distanta in cm
   return durata * 0.034 / 2.0;
@@ -117,7 +113,9 @@ float masurareDistanta() {
 
 //calibreaza senzorul ultrasonic la pornire
 void setareUltrasonic() {
-  if (!setareInCurs) return;
+  if (!setareInCurs) 
+    return;
+  
   unsigned long t = millis();
 
   //masoara la fiecare 100ms
@@ -149,6 +147,9 @@ void setareUltrasonic() {
   }
 }
 
+void clearSerialBuffer() {
+  if(Serial.available() > 0) Serial.read();
+}
 //proceseaza meniul principal
 void handleMenu() {
   //verifica daca exista input si nu asteapta parola
@@ -164,7 +165,7 @@ void handleMenu() {
         break;
       case '2': //intra in meniul de setari
         if (state == State::Dezarmat) 
-        afisareSubmeniuSetari();
+          afisareSubmeniuSetari();
         break;
       case '3': //testeaza alarma
         if (state == State::Dezarmat) {
@@ -178,134 +179,112 @@ void handleMenu() {
 
 //proceseaza meniul de setari
 void handleSettingsMenu() {
-  static char optSet = 0; //optiunea curenta
-  static bool asteaptaValoare = false; //flag pentru introducere numerica
-  static bool schimbareParola = false; //flag pentru proces de schimbare parola
+  static char opt = 0;
+  static bool asteaptaValoare = false;
 
-  if (!inSubmeniuSetari) 
-  return;
+  if (!inSubmeniuSetari) return;
 
-  //citeste optiunea de meniu
-  if (!asteaptaValoare && Serial.available() > 0) {
-    char c = Serial.read();
+  // Dacă nu așteptăm o valoare, citim opțiunea
+  if (!asteaptaValoare && Serial.available()) {
+     String optStr = Serial.readStringUntil('\n');
+    optStr.trim();
 
-    if (c == '\n' || c == '\r') 
+    // daca doar a apăsat Enter
+    if (optStr.length() == 0)
       return;
-    optSet = c;
 
-    //verifica fiecare caz
-    if (optSet == '1') {
-      Serial.println("Introduceti noua sensibilitate ultrasonic (cm):");
-      clearSerialBuffer();
-      asteaptaValoare = true;
-    } else if (optSet == '2') {
-      Serial.println("Introduceti noul prag LDR (0-1023):");
-      clearSerialBuffer();
-      asteaptaValoare = true;
-    } else if (optSet == '3') {
-      Serial.println("Introduceti noua frecventa buzzer (Hz):");
-      clearSerialBuffer();
-      asteaptaValoare = true;
-    } else if (optSet == '4') {
-      //schimbare parola
-      Serial.println("Introduceti parola curenta:");
-      clearSerialBuffer();
+    opt = optStr.charAt(0);
 
-      asteaptaValoare = true;
-      schimbareParola = true;
+    Serial.print("Ai ales optiunea: ");
+    Serial.println(opt);
 
-      index_parola = 0;
-      ParolaIntrodusa[0] = '\0';
-    } else if (optSet == '5') {
-      //revenire la meniu principal
-      inSubmeniuSetari = false;
-      asteaptaValoare = false;
-      schimbareParola = false;
-      asteaptaParolaNoua = false;
-      optSet = 0;
-
-      clearSerialBuffer();
-      vreauAfisareMeniu = 1;
-      afisareMeniu();
-
-      return;
-    } else {
-      Serial.println("Optiune aleasa nu este valida!");
-      afisareSubmeniuSetari();
-      return;
-    }
+    asteaptaValoare = true;
   }
+  // Acum procesăm opțiunea selectată
+  if (asteaptaValoare && Serial.available()) {
 
-  //proces de schimbare parola
-  if (optSet == '4' && Serial.available() > 0) {
-    char c = Serial.read();
-    if (c == '\n' || c == '\r') {
-      ParolaIntrodusa[index_parola] = '\0';
-      int len = strlen(ParolaIntrodusa);
-      while (len > 0 && (ParolaIntrodusa[len - 1] == '\r' || ParolaIntrodusa[len - 1] == '\n'))
-        ParolaIntrodusa[--len] = '\0';
+    String valStr = Serial.readStringUntil('\n');
+    valStr.trim();
 
-      if (asteaptaParolaNoua) {
-        strncpy(ParolaSetata, ParolaIntrodusa, sizeof(ParolaSetata) - 1);
-        ParolaSetata[sizeof(ParolaSetata) - 1] = '\0';
-        Serial.println("Parola a fost schimbata cu succes!");
-        asteaptaParolaNoua = false;
-        asteaptaValoare = false;
-        index_parola = 0;
-        ParolaIntrodusa[0] = '\0';
-        Serial.println();
-        afisareSubmeniuSetari();
-        return;
-      }
+    switch (opt) {
+      case '1':
+        distantaMax = valStr.toInt();
+        Serial.print("Toleranta setata la ");
+        Serial.print(distantaMax);
+        Serial.println(" cm");
+        break;
 
-      //verificare parola curenta
-      if (strcmp(ParolaIntrodusa, ParolaSetata) == 0) {
-        Serial.println("Parola corecta. Introduceti noua parola:");
-        asteaptaParolaNoua = true;
-        index_parola = 0;
-        ParolaIntrodusa[0] = '\0';
-      } else {
-        Serial.println("Parola este incorecta! Nu se poate schimba parola.");
-        asteaptaValoare = false;
-        index_parola = 0;
-        ParolaIntrodusa[0] = '\0';
-        Serial.println();
-        afisareSubmeniuSetari();
-      }
-    } else {
-      //adauga caractere in buffer
-      if (index_parola < sizeof(ParolaIntrodusa) - 1)
-        ParolaIntrodusa[index_parola++] = c;
+      case '2':
+        PragLDR = valStr.toInt();
+        Serial.print("Prag lumina setat la ");
+        Serial.println(PragLDR);
+        break;
+
+      case '3':
+        buzzerFrecventa = valStr.toInt();
+        Serial.print("Frecventa setata la ");
+        Serial.print(buzzerFrecventa);
+        Serial.println(" Hz");
+        tone(BuzzerPIN, buzzerFrecventa, 500);
+        break;
+
+      case '4':
+        Serial.println("Introdu parola curenta:");
+
+        static String valStr = "";
+        while (valStr.length() == 0) {
+          if (Serial.available()) {
+            valStr = Serial.readStringUntil('\n');
+            valStr.trim();
+          }
+        }
+        if (valStr == ParolaSetata) {
+          Serial.println("Introdu noua parola:");
+          static String valNoua = "";
+          while (valNoua.length() == 0) {
+            if (Serial.available()) {
+              valNoua = Serial.readStringUntil('\n');
+              valNoua.trim();
+            }
+          }
+          valNoua.toCharArray(ParolaSetata, sizeof(ParolaSetata));
+          //ParolaSetata = valNoua;
+          clearSerialBuffer();
+
+          Serial.println("Parola a fost actualizata. SPY CAT te saluta!");
+          valStr = "";
+          valNoua = "";
+        } else {
+          Serial.println("Parola incorecta! SPY CAT ti-a refuzat accesul.");
+          valStr = "";
+        }
+        break;
+      
+        case '5':
+          inSubmeniuSetari = false;
+          Serial.println("Revenire la meniul principal.");
+          vreauAfisareMeniu=1;
+          afisareMeniu();
+          opt = 0;
+          asteaptaValoare = false;
+          return;
+
+        default:
+          Serial.println("Optiune invalida!");
+          afisareSubmeniuSetari();
+          break;
     }
-    return;
-  }
 
-  //citire valori numerice pentru alte setari
-  if (asteaptaValoare && Serial.available() > 0 && optSet != '4') {
-   
-    String inputString = Serial.readStringUntil('\n'); // citește tot ce ai scris până la Enter
-  inputString.trim(); // elimina spatiile, \r, \n
-  int valoare = inputString.toInt();
-
-    if (optSet == '1') {
-      distantaMax = valoare;
-      Serial.print("Noua sensibilitate setata: ");
-      Serial.println(distantaMax);
-    } else if (optSet == '2') {
-      PragLDR =valoare;
-      Serial.print("Prag LDR setat: ");
-      Serial.println(PragLDR);
-    } else if (optSet == '3') {
-      buzzerFrecventa = valoare;
-      Serial.print("Noua frecventa buzzer: ");
-      Serial.println(buzzerFrecventa);
-    }
+    // Resetăm flagurile
     asteaptaValoare = false;
-    optSet = 0;
+    opt = 0;
+
+    // Reafișăm submeniul
     Serial.println();
     afisareSubmeniuSetari();
   }
 }
+
 
 //functie care verifica senzorii
 void checkSensors() {
@@ -318,6 +297,7 @@ void checkSensors() {
     digitalWrite(Verde, HIGH);
     digitalWrite(Rosu, LOW);
     noTone(BuzzerPIN);
+
     if (lumina_prezent <= PragLDR) {
       //armare automata cand e intuneric
       state = State::SeArmeaza;
@@ -363,13 +343,17 @@ void handlePassword() {
     char c = Serial.read();
     if (c == '\n' || c == '\r') {
       ParolaIntrodusa[index_parola] = '\0';
+
       if (strcmp(ParolaIntrodusa, ParolaSetata) == 0) {
         Serial.println("Parola corecta. Sistemul a fost dezarmat.");
+
         state = State::Dezarmat;
         asteaptaParola = false;
+
         noTone(BuzzerPIN);
         digitalWrite(Rosu, LOW);
         digitalWrite(Verde, HIGH);
+        
         Serial.println("Sistemul este DEZARMAT");
       } else {
         Serial.println("Parola incorecta!");
