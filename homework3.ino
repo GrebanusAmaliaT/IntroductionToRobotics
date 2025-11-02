@@ -18,7 +18,7 @@ struct State {
   static const byte Dezarmat = 0; //sistem inactiv
   static const byte SeArmeaza = 1; //sistemul se armeaza
   static const byte Armat = 2; //sistemul monitorizeaza senzorii
-  static const byte Pregatit_De_Activare = 3; //intrus detectat, asteapta parola
+  static const byte PregatitDeActivare = 3; //intrus detectat, asteapta parola
   static const byte AlarmaActiva = 4; //alarma este activa
 };
 
@@ -26,7 +26,7 @@ byte state = State::Dezarmat; //starea curenta a sistemului
 
 //variabile legate de parola si input serial
 bool asteaptaParola = false; //indica daca sistemul asteapta o parola
-byte index_parola = 0; //pozitia curenta in sirul introdus
+byte indexParola = 0; //pozitia curenta in sirul introdus
 char NumeSistem[35] = "\nAlarma antiefractie - SPY CAT SRL"; //mesaj de start
 char ParolaSetata[32] = "ADOR_PISICILE"; //parola initiala
 char ParolaIntrodusa[32]; //buffer pentru parola introdusa
@@ -37,7 +37,7 @@ unsigned int buzzerFrecventa = 1000; //frecventa buzzerului
 unsigned int PragLDR = 60; //prag lumina pentru armare automata
 
 //alte variabile de control
-unsigned long timer_alarmare = 0; //temporizare pentru diverse procese
+unsigned long timerAlarmare = 0; //temporizare pentru diverse procese
 bool inSubmeniuSetari = false; //flag daca suntem in meniul de setari
 int vreauAfisareMeniu = 0; //flag pentru afisare meniu principal
 bool asteaptaParolaNoua = false; //flag pasul 2 din schimbarea parolei
@@ -133,10 +133,12 @@ void setareUltrasonic() {
     //dupa 5 masuratori corecte finalizeaza calibrarea
     if (numarCitiri >= 5) {
       distantaInitiala = sumaSetare / numarCitiri;
+      
       Serial.print("\nDistanta de baza: ");
       Serial.print(distantaInitiala);
       Serial.println(" cm");
       setareInCurs = false;
+
       Serial.println("Setare finalizata. Sistem gata.");
       Serial.println("Sistemul e dezarmat. Armeaza sa fii protejat de CAT SPY");
       vreauAfisareMeniu = 1;
@@ -158,7 +160,7 @@ void handleMenu() {
       case '1': //armare manuala
         if (state == State::Dezarmat) {
           Serial.println("Armare manuala initiata...");
-          timer_alarmare = millis();
+          timerAlarmare = millis();
           state = State::SeArmeaza;
         }
         break;
@@ -183,7 +185,6 @@ void handleSettingsMenu() {
 
   if (!inSubmeniuSetari) return;
 
-  // Dacă nu așteptăm o valoare, citim opțiunea
   if (!asteaptaValoare && Serial.available()) {
      String optStr = Serial.readStringUntil('\n');
     optStr.trim();
@@ -199,7 +200,7 @@ void handleSettingsMenu() {
 
     asteaptaValoare = true;
   }
-  // Acum procesăm opțiunea selectată
+
   if (asteaptaValoare && Serial.available()) {
 
     String valStr = Serial.readStringUntil('\n');
@@ -284,8 +285,8 @@ void handleSettingsMenu() {
 
 //functie care verifica senzorii
 void checkSensors() {
-  unsigned long timer_prezent = millis();
-  int lumina_prezent = analogRead(LDR); //citeste valoarea de lumina
+  unsigned long timerPrezent = millis();
+  int luminaPrezent = analogRead(LDR); //citeste valoarea de lumina
   float distanta = masurareDistanta(); //citeste distanta curenta
 
   //stare dezarmat
@@ -294,38 +295,38 @@ void checkSensors() {
     digitalWrite(Rosu, LOW);
     noTone(BuzzerPIN);
 
-    if (lumina_prezent <= PragLDR) {
+    if (luminaPrezent <= PragLDR) {
       //armare automata cand e intuneric
       state = State::SeArmeaza;
-      timer_alarmare = timer_prezent;
+      timerAlarmare = timerPrezent;
       Serial.println("Se armeaza automat (lumina scazuta)");
     }
   }
 
   //stare se armeaza
   if (state == State::SeArmeaza)
-    if (timer_prezent - timer_alarmare >= 3000UL) {
+    if (timerPrezent - timerAlarmare >= 3000UL) {
       state = State::Armat;
       Serial.println("Sistemul a fost armat.");
       digitalWrite(Verde, LOW);
       Serial.println("SPY CAT este pe pozitii");
     } else {
-      digitalWrite(Verde, (timer_prezent / 500) % 2);
+      digitalWrite(Verde, (timerPrezent / 500) % 2);
     }
 
   //stare armat - detectare miscare
   if (state == State::Armat && distanta > 0 && distanta < 400) {
     float diferenta = fabs(distanta - distantaInitiala);
     if (diferenta > distantaMax) {
-      timer_alarmare = timer_prezent;
-      state = State::Pregatit_De_Activare;
+      timerAlarmare = timerPrezent;
+      state = State::PregatitDeActivare;
       Serial.println("SPY CAT a detectat un posibil intrus! Introduceti parola de siguranta:");
       asteaptaParola = true;
     }
   }
 
   //stare pregatit - daca nu se introduce parola in 3 secunde
-  if (state == State::Pregatit_De_Activare && (timer_prezent - timer_alarmare >= 3000UL) && asteaptaParola == true) {
+  if (state == State::PregatitDeActivare && (timerPrezent - timerAlarmare >= 3000UL) && asteaptaParola == true) {
     Serial.println("Parola neintrodusa la timp — alarma pornita!");
     state = State::AlarmaActiva;
     asteaptaParola = true;
@@ -338,7 +339,7 @@ void handlePassword() {
   if (Serial.available() > 0 && asteaptaParola) {
     char c = Serial.read();
     if (c == '\n' || c == '\r') {
-      ParolaIntrodusa[index_parola] = '\0';
+      ParolaIntrodusa[indexParola] = '\0';
 
       if (strcmp(ParolaIntrodusa, ParolaSetata) == 0) {
         Serial.println("Parola corecta. Sistemul a fost dezarmat.");
@@ -357,11 +358,11 @@ void handlePassword() {
         asteaptaParola = true;
         Serial.println("Parola gresita – ALARMA ACTIVATA!");
       }
-      index_parola = 0;
+      indexParola = 0;
       ParolaIntrodusa[0] = '\0';
     } else {
-      if (index_parola < sizeof(ParolaIntrodusa) - 1)
-        ParolaIntrodusa[index_parola++] = c;
+      if (indexParola < sizeof(ParolaIntrodusa) - 1)
+        ParolaIntrodusa[indexParola++] = c;
     }
   }
 }
