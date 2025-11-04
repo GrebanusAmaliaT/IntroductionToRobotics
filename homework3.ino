@@ -1,122 +1,123 @@
 //pinii folositi pentru senzori si componente
-const int TrigPIN = 6; //pin de iesire pentru declansarea senzorului ultrasonic
-const int EchoPIN = 7; //pin de intrare pentru ecoul senzorului ultrasonic
-const int BuzzerPIN = 5; //pin de iesire pentru buzzer (alarma sonora)
-const int Rosu = 10; //pin pentru ledul rosu (stare alarma)
-const int Verde = 11; //pin pentru ledul verde (stare dezarmat)
-const int LDR = A0; //pin analogic pentru senzorul de lumina (ldr)
+const int TrigPIN = 6; //pin de iesire care trimite impuls catre senzorul ultrasonic (HC-SR04)
+const int EchoPIN = 7; //pin de intrare care primeste ecoul reflectat de obiect
+const int buzzerPIN = 5; //pin de iesire catre buzzer pentru semnal sonor de alarma
+const int Rosu = 10; //pin pentru ledul rosu care indica starea de alarma
+const int Verde = 11; //pin pentru ledul verde care indica starea dezarmata
+const int LDR = A0; //pin analogic conectat la senzorul de lumina (ldr)
 
-//variabile pentru calibrarea si masurarea distantei initiale
-bool setareInCurs = true; //flag care indica daca sistemul este in calibrare
-unsigned long ultimaMasurare = 0; //momentul ultimei masuratori
-int numarCitiri = 0; //numarul total de citiri la calibrare
-float sumaSetare = 0; //suma tuturor masuratorilor pentru media
-float distantaInitiala = 0; //distanta medie initiala masurata
+//variabile pentru calibrarea senzorului ultrasonic la pornirea sistemului
+bool setareInCurs = true; //flag care indica daca sistemul este in etapa de calibrare initiala
+unsigned long ultimaMasurare = 0; //timpul ultimei masuratori in milisecunde
+int numarCitiri = 0; //numarul de masuratori efectuate pentru calculul mediei
+float sumaSetare = 0; //suma valorilor masurate pentru a obtine media
+float distantaInitiala = 0; //distanta medie initiala considerata "normala" (fara intrusi)
 
-//structura pentru starea sistemului
+//structura care defineste starile posibile ale sistemului
 struct State {
-  static const byte Dezarmat = 0; //sistem inactiv
-  static const byte SeArmeaza = 1; //sistemul se armeaza
-  static const byte Armat = 2; //sistemul monitorizeaza senzorii
-  static const byte PregatitDeActivare = 3; //intrus detectat, asteapta parola
-  static const byte AlarmaActiva = 4; //alarma este activa
+  static const byte Dezarmat = 0; //sistemul este inactiv, fara monitorizare
+  static const byte SeArmeaza = 1; //sistemul intra in armare cu o scurta intarziere
+  static const byte Armat = 2; //sistemul este complet armat si monitorizeaza senzorii
+  static const byte PregatitDeActivare = 3; //s-a detectat miscare, asteapta parola de siguranta
+  static const byte AlarmaActiva = 4; //alarma este activata, sirena si ledul rosu functioneaza
 };
 
-byte state = State::Dezarmat; //starea curenta a sistemului
+byte state = State::Dezarmat; //starea curenta a sistemului la pornire
 
-//variabile legate de parola si input serial
-bool asteaptaParola = false; //indica daca sistemul asteapta o parola
-byte indexParola = 0; //pozitia curenta in sirul introdus
-char NumeSistem[35] = "\nAlarma antiefractie - SPY CAT SRL"; //mesaj de start
-char ParolaSetata[32] = "ADOR_PISICILE"; //parola initiala
-char ParolaIntrodusa[32]; //buffer pentru parola introdusa
+//variabile pentru gestionarea parolei si a inputului serial
+bool asteaptaparola = false; //indica daca sistemul asteapta introducerea unei parole
+byte indexparola = 0; //pozitia curenta in sirul de caractere introdus de utilizator
+char numeAlarma[35] = "\nAlarma antiefractie - SPY CAT SRL"; //mesaj de start al sistemului
+char parolaSetata[32] = "ADOR_PISICILE"; //parola implicita setata initial
+char parolaIntrodusa[32]; //buffer unde se stocheaza parola introdusa pentru comparatie
 
-//parametri configurabili ai sistemului
-unsigned int distantaMax = 50; //prag sensibilitate senzor ultrasonic
-unsigned int buzzerFrecventa = 1000; //frecventa buzzerului
-unsigned int PragLDR = 60; //prag lumina pentru armare automata
+//parametri configurabili care definesc sensibilitatea si comportamentul sistemului
+unsigned int distantaMax = 50; //toleranta maxima in centimetri pentru detectia miscarii
+unsigned int buzzerFrecventa = 1000; //frecventa semnalului sonor al buzzerului in hertz
+unsigned int pragLDR = 60; //valoare prag pentru lumina, sub care se armeaza automat sistemul
 
-//alte variabile de control
-unsigned long timerAlarmare = 0; //temporizare pentru diverse procese
-bool inSubmeniuSetari = false; //flag daca suntem in meniul de setari
-int vreauAfisareMeniu = 0; //flag pentru afisare meniu principal
-bool asteaptaParolaNoua = false; //flag pasul 2 din schimbarea parolei
+//variabile auxiliare de control si afisare
+unsigned long timerAlarmare = 0; //momentul utilizat pentru intarzieri si temporizari
+bool inSubmeniuSetari = false; //flag care indica daca utilizatorul se afla in meniul de setari
+int vreauAfisareMeniu = 0; //flag folosit pentru afisarea meniului principal dupa o actiune
+bool asteaptaparolaNoua = false; //flag folosit la pasul de schimbare a parolei
 
-//initializare sistem
+//initializarea sistemului la pornire
 void setup() {
-  Serial.begin(9600); //pornire comunicare seriala
+  Serial.begin(9600); //porneste comunicatia seriala cu viteza de 9600 bps
 
-  //setare pini
+  //configurarea pinilor de intrare si iesire
   pinMode(TrigPIN, OUTPUT);
   pinMode(EchoPIN, INPUT);
-  pinMode(BuzzerPIN, OUTPUT);
+  pinMode(buzzerPIN, OUTPUT);
   pinMode(Rosu, OUTPUT);
   pinMode(Verde, OUTPUT);
   pinMode(LDR, INPUT);
 
-  //pornire in stare dezarmata
+  //setarea initiala a starii sistemului (dezarmat)
   digitalWrite(Verde, HIGH);
   digitalWrite(Rosu, LOW);
-  noTone(BuzzerPIN);
+  noTone(buzzerPIN); //opreste buzzerul daca era activ
 
-  //mesaj de start si calibrare
-  Serial.println(NumeSistem);
+  //mesaj de pornire si initierea calibrarii senzorului ultrasonic
+  Serial.println(numeAlarma);
   Serial.println("Sistem pornit. Incep calibrarea ultrasonicului...");
-  setareUltrasonic(); //apeleaza calibrarea initiala
+  setareUltrasonic(); //apeleaza rutina de calibrare initiala
 }
 
-//functie care afiseaza meniul principal
+//functie care afiseaza meniul principal de optiuni pentru utilizator
 void afisareMeniu() {
   if (vreauAfisareMeniu == 1) {
     Serial.println("\n~~~~~~~~~~~~~~~~~~~~~ Meniul Principal ~~~~~~~~~~~~~~~~~~~~~~");
-    Serial.println("SPY CAT a spus: Buna!!! Cum te pot ajuta astazi?");
+    Serial.println("SPY CAT a spus: Buna! Cum te pot ajuta astazi?");
     Serial.println("1. Armare sistem");
     Serial.println("2. Setari/Configurare");
     Serial.println("3. Testare alarma");
-    Serial.println("~~~~~~~~~~~~~~~~~~~~~~ Introdu optiunea dorita ~~~~~~~~~~~~~~~~~~~~~");
+    Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
   }
-  vreauAfisareMeniu = 0; //reseteaza flagul
+  vreauAfisareMeniu = 0; //reseteaza flagul pentru a evita afisari repetate
 }
 
-//afiseaza submeniul de setari
+//functie care afiseaza meniul de setari avansate
 void afisareSubmeniuSetari() {
   inSubmeniuSetari = true;
   Serial.println("\n---------------------- Setari Avansate ----------------------");
   Serial.println("SPY CAT a spus: Ce doresti sa modifici?");
   Serial.println("1. Setare sensibilitate ultrasonic (distantaMax)");
-  Serial.println("2. Setare prag lumina (PragLDR)");
+  Serial.println("2. Setare prag lumina (pragLDR)");
   Serial.println("3. Setare frecventa buzzer (buzzerFrecventa)");
   Serial.println("4. Schimbare parola");
-  Serial.println("5. Revenire la meniu principal");
-  Serial.println("------------------------ Tasteaza optiunea! --------------------");
+  Serial.println("5. Schimbare nume sistem");
+  Serial.println("6. Revenire la meniu principal");
+  Serial.println("-------------------------------------------------------------");
 }
 
-//functie care masoara distanta actuala
+//functie care masoara distanta actuala folosind senzorul ultrasonic
 float masurareDistanta() {
-  //trimite un impuls scurt catre senzor
+  //trimite un impuls scurt catre senzor pentru initierea masuratorii
   digitalWrite(TrigPIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TrigPIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TrigPIN, LOW);
 
-  //citeste timpul ecoului
-  unsigned long durata = pulseIn(EchoPIN, HIGH, 30000); //timeout 30ms
+  //citeste timpul pana cand ecoul este receptionat
+  unsigned long durata = pulseIn(EchoPIN, HIGH, 30000); //timeout de 30ms
   if (durata == 0) 
-    return -1; //daca nu s-a primit ecou, returneaza eroare
+    return -1; //daca nu s-a primit niciun ecou, returneaza eroare
 
-  //calculeaza distanta in cm
+  //calculeaza distanta in centimetri (viteza sunetului ~0.034 cm/us)
   return durata * 0.034 / 2.0;
 }
 
-//calibreaza senzorul ultrasonic la pornire
+//functie care realizeaza calibrarea automata a senzorului ultrasonic la pornire
 void setareUltrasonic() {
   if (!setareInCurs) 
     return;
   
   unsigned long t = millis();
 
-  //masoara la fiecare 100ms
+  //realizeaza o masurare la fiecare 100ms
   if (t - ultimaMasurare >= 100) {
     ultimaMasurare = t;
     float d = masurareDistanta();
@@ -130,31 +131,31 @@ void setareUltrasonic() {
       Serial.println(" cm");
     }
 
-    //dupa 5 masuratori corecte finalizeaza calibrarea
+    //dupa 5 masuratori valide se finalizeaza calibrarea
     if (numarCitiri >= 5) {
-      distantaInitiala = sumaSetare / numarCitiri;
-      
+      distantaInitiala = sumaSetare / numarCitiri; //calculeaza media
       Serial.print("\nDistanta de baza: ");
       Serial.print(distantaInitiala);
       Serial.println(" cm");
       setareInCurs = false;
 
-      Serial.println("Setare finalizata. Sistem gata.");
-      Serial.println("Sistemul e dezarmat. Armeaza sa fii protejat de CAT SPY");
+      Serial.println("Calibrare finalizata. Sistem gata de utilizare.");
+      Serial.println("Sistemul este dezarmat. Armeaza pentru a activa protectia SPY CAT.");
       vreauAfisareMeniu = 1;
       afisareMeniu();
     }
   }
 }
 
-//functie care goleste bufferul serial
+//functie care curata bufferul serial pentru a evita caractere reziduale
 void clearSerialBuffer() {
   if(Serial.available() > 0) Serial.read();
 }
-//proceseaza meniul principal
+
+//functie care gestioneaza meniul principal si comenzile utilizatorului
 void handleMenu() {
-  //verifica daca exista input si nu asteapta parola
-  if (!asteaptaParola && Serial.available() > 0 && !inSubmeniuSetari) {
+  //verifica daca exista input valid si sistemul nu asteapta parola
+  if (!asteaptaparola && Serial.available() > 0 && !inSubmeniuSetari) {
     char opt = Serial.read(); //citeste optiunea introdusa
     switch (opt) {
       case '1': //armare manuala
@@ -164,11 +165,13 @@ void handleMenu() {
           state = State::SeArmeaza;
         }
         break;
-      case '2': //intra in meniul de setari
+
+      case '2': //intrare in meniul de setari
         if (state == State::Dezarmat) 
           afisareSubmeniuSetari();
         break;
-      case '3': //testeaza alarma
+
+      case '3': //porneste testul de alarma manual
         if (state == State::Dezarmat) {
           Serial.println("Pornire test alarma...");
           state = State::AlarmaActiva;
@@ -178,18 +181,18 @@ void handleMenu() {
   }
 }
 
-//proceseaza meniul de setari
+//functie care gestioneaza meniul de setari avansate
 void handleSettingsMenu() {
-  static char opt = 0;
-  static bool asteaptaValoare = false;
+  char opt = 0;
+  bool asteaptaValoare = false;
 
   if (!inSubmeniuSetari) return;
 
   if (!asteaptaValoare && Serial.available()) {
-     String optStr = Serial.readStringUntil('\n');
+    String optStr = Serial.readStringUntil('\n');
     optStr.trim();
 
-    // daca doar a apăsat Enter
+    //ignora inputul gol
     if (optStr.length() == 0)
       return;
 
@@ -207,167 +210,175 @@ void handleSettingsMenu() {
     valStr.trim();
 
     switch (opt) {
-      case '1':
+      case '1': //setare sensibilitate ultrasonic
         distantaMax = valStr.toInt();
         Serial.print("Toleranta setata la ");
         Serial.print(distantaMax);
         Serial.println(" cm");
         break;
 
-      case '2':
-        PragLDR = valStr.toInt();
+      case '2': //setare prag lumina pentru armare automata
+        pragLDR = valStr.toInt();
         Serial.print("Prag lumina setat la ");
-        Serial.println(PragLDR);
+        Serial.println(pragLDR);
         break;
 
-      case '3':
+      case '3': //setare frecventa buzzer
         buzzerFrecventa = valStr.toInt();
-        Serial.print("Frecventa setata la ");
+        Serial.print("Frecventa buzzer setata la ");
         Serial.print(buzzerFrecventa);
         Serial.println(" Hz");
-        tone(BuzzerPIN, buzzerFrecventa, 500);
+        tone(buzzerPIN, buzzerFrecventa, 500);
         break;
 
-      case '4':
+      case '4': //schimbare parola sistem
         Serial.println("Introdu parola curenta:");
-
-        static String valStr = "";
-        while (valStr.length() == 0) {
-          if (Serial.available()) {
-            valStr = Serial.readStringUntil('\n');
-            valStr.trim();
-          }
-        }
-        if (valStr == ParolaSetata) {
-          Serial.println("Introdu noua parola:");
-          static String valNoua = "";
-          while (valNoua.length() == 0) {
+        {
+          String valStr = "";
+          while (valStr.length() == 0) {
             if (Serial.available()) {
-              valNoua = Serial.readStringUntil('\n');
-              valNoua.trim();
+              valStr = Serial.readStringUntil('\n');
+              valStr.trim();
             }
           }
-          valNoua.toCharArray(ParolaSetata, sizeof(ParolaSetata));
-          //ParolaSetata = valNoua;
-          clearSerialBuffer();
-
-          Serial.println("Parola a fost actualizata. SPY CAT te saluta!");
-          valStr = "";
-          valNoua = "";
-        } else {
-          Serial.println("Parola incorecta! SPY CAT ti-a refuzat accesul.");
-          valStr = "";
+          if (valStr == parolaSetata) {
+            Serial.println("Introdu noua parola:");
+            String valNoua = "";
+            while (valNoua.length() == 0) {
+              if (Serial.available()) {
+                valNoua = Serial.readStringUntil('\n');
+                valNoua.trim();
+              }
+            }
+            valNoua.toCharArray(parolaSetata, sizeof(parolaSetata));
+            clearSerialBuffer();
+            Serial.println("parola a fost actualizata cu succes!");
+          } else {
+            Serial.println("parola incorecta! Acces refuzat.");
+          }
         }
         break;
-      
-        case '5':
-          inSubmeniuSetari = false;
-          Serial.println("Revenire la meniul principal.");
-          vreauAfisareMeniu=1;
-          afisareMeniu();
-          opt = 0;
-          asteaptaValoare = false;
-          return;
 
-        default:
-          Serial.println("Optiune invalida!");
-          afisareSubmeniuSetari();
-          break;
+      case '5': //schimbare nume sistem
+        Serial.println("Introdu noul nume al sistemului:");
+        {
+          String valNume = "";
+          while (valNume.length() == 0) {
+            if (Serial.available()) {
+              valNume = Serial.readStringUntil('\n');
+              valNume.trim();
+            }
+          }
+          valNume.toCharArray(numeAlarma, sizeof(numeAlarma));
+          clearSerialBuffer();
+          Serial.print("Nume sistem actualizat: ");
+          Serial.println(numeAlarma);
+        }
+        break;
+
+      case '6': //revenire la meniul principal
+        inSubmeniuSetari = false;
+        Serial.println("Revenire la meniul principal...");
+        vreauAfisareMeniu=1;
+        afisareMeniu();
+        opt = 0;
+        asteaptaValoare = false;
+        return;
+
+      default:
+        Serial.println("Optiune invalida! Reincearca.");
+        afisareSubmeniuSetari();
+        break;
     }
     asteaptaValoare = false;
     opt = 0;
-
     Serial.println();
     afisareSubmeniuSetari();
   }
 }
 
-
-//functie care verifica senzorii
+//functie care verifica starea senzorilor in functie de stare
 void checkSensors() {
   unsigned long timerPrezent = millis();
-  int luminaPrezent = analogRead(LDR); //citeste valoarea de lumina
-  float distanta = masurareDistanta(); //citeste distanta curenta
+  int luminaPrezent = analogRead(LDR); //citeste valoarea curenta a luminii ambientale
+  float distanta = masurareDistanta(); //citeste distanta actuala masurata
 
-  //stare dezarmat
+  //comportament in stare dezarmata
   if (state == State::Dezarmat) {
     digitalWrite(Verde, HIGH);
     digitalWrite(Rosu, LOW);
-    noTone(BuzzerPIN);
+    noTone(buzzerPIN);
 
-    if (luminaPrezent <= PragLDR) {
-      //armare automata cand e intuneric
+    if (luminaPrezent <= pragLDR) {
+      //armare automata cand nivelul de lumina este scazut
       state = State::SeArmeaza;
       timerAlarmare = timerPrezent;
-      Serial.println("Se armeaza automat (lumina scazuta)");
+      Serial.println("Se armeaza automat (lumina scazuta detectata)");
     }
   }
 
-  //stare se armeaza
+  //comportament in stare de armare (intarziere de 3 secunde)
   if (state == State::SeArmeaza)
     if (timerPrezent - timerAlarmare >= 3000UL) {
       state = State::Armat;
-      Serial.println("Sistemul a fost armat.");
+      Serial.println("Sistemul a fost armat complet.");
       digitalWrite(Verde, LOW);
-      Serial.println("SPY CAT este pe pozitii");
+      Serial.println("SPY CAT monitorizeaza zona...");
     } else {
-      digitalWrite(Verde, (timerPrezent / 500) % 2);
+      digitalWrite(Verde, (timerPrezent / 500) % 2); //led verde clipitor
     }
 
-  //stare armat - detectare miscare
+  //comportament in stare armat (detectie miscare)
   if (state == State::Armat && distanta > 0 && distanta < 400) {
     float diferenta = fabs(distanta - distantaInitiala);
     if (diferenta > distantaMax) {
       timerAlarmare = timerPrezent;
       state = State::PregatitDeActivare;
-      Serial.println("SPY CAT a detectat un posibil intrus! Introduceti parola de siguranta:");
-      asteaptaParola = true;
+      Serial.println("SPY CAT a detectat un posibil intrus! Introduceti parola:");
+      asteaptaparola = true;
     }
   }
 
-  //stare pregatit - daca nu se introduce parola in 3 secunde
-  if (state == State::PregatitDeActivare && (timerPrezent - timerAlarmare >= 3000UL) && asteaptaParola == true) {
-    Serial.println("Parola neintrodusa la timp — alarma pornita!");
+  //daca parola nu este introdusa in timp util (3 secunde)
+  if (state == State::PregatitDeActivare && (timerPrezent - timerAlarmare >= 3000UL) && asteaptaparola == true) {
+    Serial.println("Timp expirat - parola neintrodusa!");
     state = State::AlarmaActiva;
-    asteaptaParola = true;
-    Serial.println("!!!!ALARMA A FOST ACTIVATA!!!!");
+    asteaptaparola = true;
+    Serial.println("!!!!ALARMA ACTIVATA!!!!");
   }
 }
 
-//functie care gestioneaza introducerea parolei
+//functie care gestioneaza introducerea si verificarea parolei
 void handlePassword() {
-  if (Serial.available() > 0 && asteaptaParola) {
+  if (Serial.available() > 0 && asteaptaparola) {
     char c = Serial.read();
     if (c == '\n' || c == '\r') {
-      ParolaIntrodusa[indexParola] = '\0';
+      parolaIntrodusa[indexparola] = '\0';
 
-      if (strcmp(ParolaIntrodusa, ParolaSetata) == 0) {
-        Serial.println("Parola corecta. Sistemul a fost dezarmat.");
-
+      if (strcmp(parolaIntrodusa, parolaSetata) == 0) {
+        Serial.println("parola corecta. Sistem dezarmat.");
         state = State::Dezarmat;
-        asteaptaParola = false;
-
-        noTone(BuzzerPIN);
+        asteaptaparola = false;
+        noTone(buzzerPIN);
         digitalWrite(Rosu, LOW);
         digitalWrite(Verde, HIGH);
-        
-        Serial.println("Sistemul este DEZARMAT");
+        Serial.println("Sistemul este acum in stare DEZARMATA.");
       } else {
-        Serial.println("Parola incorecta!");
+        Serial.println("parola incorecta! Alarma ramane activa.");
         state = State::AlarmaActiva;
-        asteaptaParola = true;
-        Serial.println("Parola gresita – ALARMA ACTIVATA!");
+        asteaptaparola = true;
+        Serial.println("parola gresita – alarma ramane pornita!");
       }
-      indexParola = 0;
-      ParolaIntrodusa[0] = '\0';
+      indexparola = 0;
+      parolaIntrodusa[0] = '\0';
     } else {
-      if (indexParola < sizeof(ParolaIntrodusa) - 1)
-        ParolaIntrodusa[indexParola++] = c;
+      if (indexparola < sizeof(parolaIntrodusa) - 1)
+        parolaIntrodusa[indexparola++] = c;
     }
   }
 }
 
-//actualizeaza starea alarmei
+//functie care actualizeaza comportamentul sonor si vizual al alarmei
 void updateAlarm() {
   if (state == State::AlarmaActiva) {
     static unsigned long bipaitura = 0;
@@ -375,27 +386,29 @@ void updateAlarm() {
       bipaitura = millis();
       digitalWrite(Rosu, !digitalRead(Rosu)); //led rosu clipitor
     }
-    tone(BuzzerPIN, buzzerFrecventa); //buzzer activ
+    tone(buzzerPIN, buzzerFrecventa); //buzzer activ constant
   } else {
-    noTone(BuzzerPIN);
+    noTone(buzzerPIN);
     digitalWrite(Rosu, LOW);
   }
 }
 
-//bucla principala
+//bucla principala care coordoneaza intregul sistem
 void loop() {
   if (setareInCurs) {
-    setareUltrasonic(); //calibrare la start
+    setareUltrasonic(); //continua procesul de calibrare pana la finalizare
     return;
   }
   if (state == State::AlarmaActiva) {
-    handlePassword();
-    updateAlarm();
+    handlePassword(); //permite dezarmarea in timpul alarmei
+    updateAlarm(); //actualizeaza buzzer si led
   } else {
-    handleMenu();
-    handleSettingsMenu();
+    handleMenu(); //gestioneaza comenzile utilizatorului
+    handleSettingsMenu(); //proceseaza meniul de configurare
     checkSensors();
     handlePassword();
     updateAlarm();
   }
 }
+    
+
