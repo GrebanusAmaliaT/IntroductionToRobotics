@@ -196,7 +196,13 @@ This ensures non-blocking behavior even during input or display transitions.
 - Code fully non-blocking and modular.
 
 ### Pictures of the setup
-......
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/008392b6-d9e2-4f66-9d5b-aa4a21618c7d" width="500" />
+  <img src="https://github.com/user-attachments/assets/3f6a8f3e-a241-4aa2-9634-817791bf2673" width="500" />
+  <img src="https://github.com/user-attachments/assets/6d626880-a4a1-44e4-b551-242fd26a67c7" width="500" />
+  <img src="https://github.com/user-attachments/assets/c67c5142-a8da-4e1f-adce-161e7da9cff5" width="500" />
+</p>
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/c0407bc2-2aa1-4f60-bff2-ebf4b9670c84" />
 
 ### Video
 https://youtube.com/shorts/zyQKuGl74S0?feature=share
