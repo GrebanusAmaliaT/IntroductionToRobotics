@@ -1,7 +1,7 @@
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 
-// definim pinii pentru ecranul lcd si controalele analogice/digitale
+/pinii pentru ecranul lcd si controalele analogice/digitale
 const int PIN_RS = 8, PIN_EN = 9, PIN_D4 = 4, PIN_D5 = 5, PIN_D6 = 6, PIN_D7 = 7;
 
 // pinii pentru joystick si butoane; pullup intern unde e cazul
@@ -14,8 +14,8 @@ const int PIN_BUZZER = 3;
 
 LiquidCrystal lcd(PIN_RS, PIN_EN, PIN_D4, PIN_D5, PIN_D6, PIN_D7);
 
-// definim grafic caracterele speciale pixel cu pixel
-// 1 inseamna pixel aprins, 0 stins. matrice de 5x8
+// definirea grafica a caracterelor speciale (pixel cu pixel)
+// 1 inseamna pixel aprins, 0 stins
 byte rawGirl[8] = { 
   0b10001, 0b01110, 0b01110, 0b00100, 
   0b01110, 0b11111, 0b11111, 0b01010 
@@ -169,12 +169,12 @@ class LCDRenderer : public IRenderer {
     }
 
     void drawMenu(int highScores[]) override {
-        // ciclam prin top 3 scoruri la fiecare 2 secunde folosind millis
+        //trecere prin top 3 scoruri la fiecare 2 secunde folosind millis
         int showIndex = (millis() / 2000) % 3; 
         
         // schimbam titlul jocului la fiecare 3 secunde pentru efect vizual
-        const char* titles[] = { "~Dangerous Love~", "~ Run Run RUN! ~", "~ Hearts Thief ~" };
-        int titleIndex = (millis() / 3000) % 3;
+        const char* titles[] = { "~Dangerous Love~", "~ No FAKE love ~", "~ Hearts Thief ~", "~ Run FAST Run ~" };
+        int titleIndex = (millis() / 3000) % 4;
 
         lcd.setCursor(0, 0); lcd.print(titles[titleIndex]);
         lcd.setCursor(0, 1); lcd.print(showIndex + 1); 
@@ -184,7 +184,7 @@ class LCDRenderer : public IRenderer {
         else if(showIndex == 1) lcd.print("nd");
         else lcd.print("rd");
         
-        lcd.print("Score:"); lcd.print(highScores[showIndex]); lcd.print("   "); 
+        lcd.print(" Score: "); lcd.print(highScores[showIndex]); lcd.print("   "); 
     }
 
     void drawSettings(int option) override {
@@ -308,6 +308,8 @@ class GameController {
     unsigned long noteDuration = 0;
     unsigned long noteStartTime = 0;
     unsigned long lastButtonPress = 0; // pentru debouncing la butoane
+
+    unsigned long resetTimer = 0;
 
   public:
     GameController(GameModel *m, IRenderer *v) { model = m; view = v; }
@@ -455,38 +457,49 @@ class GameController {
                         lastButtonPress = currentMillis;
                     }
                     break;
-                
+
                 case SETTINGS:
+                    // VERIFICARE TIMER (Aici se face trecerea la MENU dupa 2 secunde)
+                    if (resetTimer > 0) {
+                        // Daca au trecut 2 secunde
+                        if (currentMillis - resetTimer > 2000) {
+                            lcd.clear();                
+                            model->currentState = MENU; 
+                            resetTimer = 0;             
+                        }
+                        //cat astept dau return ca sa nu se deseneze altceva peste mesaj
+                        return; 
+                    }
+                    //DESENARE SI NAVIGARE
                     view->drawSettings(model->settingsOption);
-                    // navigare sus/jos sau stanga/dreapta in setari
-                    if (joyY < 200 || joyX > 800) 
-                        model->settingsOption = 1; 
-                    if (joyY > 800 || joyX < 200) 
-                        model->settingsOption = 0; 
+
+                    if (joyY < 200 || joyX > 800) model->settingsOption = 1; 
+                    if (joyY > 800 || joyX < 200) model->settingsOption = 0; 
 
                     if (btnJoy && (currentMillis - lastButtonPress > 500)) {
                         if (model->settingsOption == 0) {
-                            // resetare eeprom - scriu 0 pe toate pozitiile
-                            int zero = 0; for(int i=0; i<3; i++) 
-                            EEPROM.put(i*2, zero);
-                            tone(PIN_BUZZER, 200, 300); // sunet de confirmare jos
+                            // --- RESET SCORE ---
+                            int zero = 0; for(int i=0; i<3; i++) EEPROM.put(i*2, zero);
+                            tone(PIN_BUZZER, 200, 300); 
+                            
                             lcd.setCursor(0, 1);
-                            lcd.print("! SCORES RESET !");
-                            delay(1000); 
-                            model->currentState = MENU;
+                            lcd.print("SCORE RESET!    ");
+
+                            resetTimer = currentMillis; 
+                            
                         } else {
                             model->currentState = ABOUT;
                             model->aboutStartTime = millis();
                         }
                         lastButtonPress = currentMillis;
                     }
-                    // butonul de pauza folosit ca back
+                    
                     if (btnPause && (currentMillis - lastButtonPress > 500)) {
                         model->currentState = MENU; 
                         lastButtonPress = currentMillis;
                     }
                     break;
-
+                
                 case PLAYING:
                     handlePhysics(joyX, joyY); // calculeaza miscarea
                     view->drawGame(*model);    // deseneaza rezultatul
