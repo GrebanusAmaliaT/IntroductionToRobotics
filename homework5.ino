@@ -7,14 +7,15 @@ const int PIN_RS = 8, PIN_EN = 9, PIN_D4 = 4, PIN_D5 = 5, PIN_D6 = 6, PIN_D7 = 7
 // pinii pentru joystick si butoane; pullup intern unde e cazul
 const int PIN_JOY_X = A0;
 const int PIN_JOY_Y = A1;
-const int PIN_JOY_BTN = 2;    
+const int PIN_JOY_BTN = 2; 
+
 const int PIN_BTN_PAUSE = 10; 
 
 const int PIN_BUZZER = 3;    
 
 LiquidCrystal lcd(PIN_RS, PIN_EN, PIN_D4, PIN_D5, PIN_D6, PIN_D7);
 
-// definirea grafica a caracterelor speciale (pixel cu pixel)
+// definesc grafic caracterele speciale (pixel cu pixel)
 // 1 inseamna pixel aprins, 0 stins
 byte rawGirl[8] = { 
   0b10001, 0b01110, 0b01110, 0b00100, 
@@ -61,10 +62,12 @@ class GameModel {
         playerX = 2.0;
         playerY = 1.0; // incepe pe randul de jos
         isJumping = false;
+      
         cameraX = 0;
         score = 0;
         won = false; 
         currentState = PLAYING;
+      
         generateMap(); // generez o harta noua random
     }
 
@@ -104,7 +107,10 @@ class IRenderer {
 class SerialRenderer : public IRenderer {
     float lastX = -99;
   public:
-    void init() override { Serial.begin(9600); Serial.println("SERIAL DEBUG READY"); }
+    void init() override { 
+        Serial.begin(9600); 
+        Serial.println("SERIAL DEBUG READY"); 
+    }
     
     void loadCharacters(bool isGirl) override { 
         Serial.print("Selected: "); 
@@ -119,9 +125,13 @@ class SerialRenderer : public IRenderer {
         // trebuia si asta definita chiar daca e goala
     } 
     
-    void drawPause() override { Serial.println("PAUSE"); }
+    void drawPause() override { 
+        Serial.println("PAUSE"); 
+    }
     
-    void drawGameOver(GameModel &m) override { Serial.println("GAME OVER"); }
+    void drawGameOver(GameModel &m) override { 
+        Serial.println("GAME OVER");
+    }
 
     void drawSettings(int option) override {
         Serial.print("Settings Option: ");
@@ -135,8 +145,11 @@ class SerialRenderer : public IRenderer {
     void drawGame(GameModel &m) override {
         if(abs(m.playerX - lastX) > 0.1) {
             lastX = m.playerX;
-            Serial.print("Player Pos: "); Serial.println(m.playerX);
-            Serial.print("Score: "); Serial.println(m.score);
+            Serial.print("Player Pos: "); 
+            Serial.println(m.playerX);
+
+            Serial.print("Score: "); 
+            Serial.println(m.score);
         }
     }
 };
@@ -157,15 +170,19 @@ class LCDRenderer : public IRenderer {
             lcd.createChar(0, rawBoy);
             lcd.createChar(1, rawGirl);
         }
+      
         lcd.createChar(2, rawHeart); // pozitia 2 e inima
     }
 
     void drawSelectScreen(bool isGirl) override {
-        lcd.setCursor(0, 0); lcd.print("Choose Player:");
+        lcd.setCursor(0, 0); 
+        lcd.print("Choose Player:");
         lcd.setCursor(0, 1);
         // afisam text diferit in functie de selectie
-        if (isGirl) lcd.print(" < GIRL >       ");
-        else        lcd.print(" < BOY  >       ");
+        if (isGirl) 
+            lcd.print(" < GIRL >       ");
+        else        
+            lcd.print(" < BOY  >       ");
     }
 
     void drawMenu(int highScores[]) override {
@@ -180,11 +197,15 @@ class LCDRenderer : public IRenderer {
         lcd.setCursor(0, 1); lcd.print(showIndex + 1); 
 
         // afisam sufixul corect pentru locul 1, 2 sau 3
-        if(showIndex == 0) lcd.print("st");
-        else if(showIndex == 1) lcd.print("nd");
-        else lcd.print("rd");
+        if(showIndex == 0) 
+            lcd.print("st");
+        else if(showIndex == 1) 
+            lcd.print("nd");
+        else 
+            lcd.print("rd");
         
-        lcd.print(" Score: "); lcd.print(highScores[showIndex]); lcd.print("   "); 
+        lcd.print(" Score: "); 
+        lcd.print(highScores[showIndex]); lcd.print("   "); 
     }
 
     void drawSettings(int option) override {
@@ -201,17 +222,21 @@ class LCDRenderer : public IRenderer {
     }
 
     void drawAbout() override {
-        lcd.setCursor(0, 0); lcd.print("Creator: Amalia ");
-        lcd.setCursor(0, 1); lcd.print("Game for fun <3");
+        lcd.setCursor(0, 0); 
+        lcd.print("Creator: Amalia ");
+      
+        lcd.setCursor(0, 1); 
+        lcd.print("Game for fun <3");
     }
 
     // functia principala de randare a jocului
     void drawGame(GameModel &m) override {
-        lcd.clear(); // stergem tot ca sa nu ramana artefacte
+        lcd.clear(); // sterg tot ca sa nu ramana alte chestii pe ecranul de la LCD 
 
         // parcurg cele 2 randuri si cele 16 coloane vizibile
         for(int r=0; r<2; r++) {
             lcd.setCursor(0, r);
+          
             for(int col=0; col<16; col++) {
                 // calculez indexul real din harta bazat pe pozitia camerei
                 int mapIdx = m.cameraX + col;
@@ -219,20 +244,23 @@ class LCDRenderer : public IRenderer {
                 // daca am iesit din harta, nu desenez nimic
                 if(mapIdx >= m.MAP_LENGTH) { 
                     lcd.print(" "); 
+                  
                     continue; 
                 }
 
                 // verific daca jucatorul e pe aceasta pozitie exacta
                 // fac cast la int pentru ca pozitia jucatorului e float
                 if ((int)m.playerX == mapIdx && (int)m.playerY == r) {
-                    // daca a pierdut prin "iubire", afisam inima in loc de jucator
+                    // daca a pierdut prin "iubire", afisez inima in loc de jucator
                     if (m.currentState == LOVE_ANIMATION) lcd.write((byte)2); 
                     else 
                         lcd.write((byte)0); // desenez jucatorul normal
                 } else {
                     // daca nu e jucatorul, verific ce e pe harta (inamic, inima, zid)
                     byte tile = m.mapData[r][mapIdx];
-                    if(tile == 0) lcd.print(" ");
+
+                    if(tile == 0) 
+                        lcd.print(" ");
                     else if(tile == 1) 
                         lcd.write((byte)1); // inamic
                     else if(tile == 2)
@@ -258,10 +286,14 @@ class LCDRenderer : public IRenderer {
 
         lcd.clear(); 
         
-        // daca abia a murit, afisam o animatie scurta de 1.5 secunde
+        // daca abia a murit, afisez o animatie scurta de 1.5 secunde
         if (!m.won && (millis() - m.deathTime < 1500)) {
-            lcd.setCursor(7, 0); lcd.write(byte(2)); 
-            lcd.setCursor(5, 1); lcd.print("<3 <3");
+            lcd.setCursor(7, 0); 
+            lcd.write(byte(2)); 
+
+            lcd.setCursor(5, 1); 
+            lcd.print("<3 <3");
+
             return;
         }
 
@@ -270,11 +302,13 @@ class LCDRenderer : public IRenderer {
             if (m.won) {
                 lcd.setCursor(0,0); 
                 lcd.print(" Level Completed! ");
+
                 lcd.setCursor(0,1); 
                 lcd.print("No toxic love");
             } else {
                 lcd.setCursor(0,0); 
                 lcd.print(" Game over! :( ");
+
                 lcd.setCursor(0,1); 
                 lcd.print("You fell in love");
             }
@@ -283,8 +317,10 @@ class LCDRenderer : public IRenderer {
         else if (slide == 1) {
             lcd.setCursor(0,0); 
             lcd.print("This round score");
+
             lcd.setCursor(0,1); 
             lcd.print(hearts); 
+
             lcd.print(" Hearts "); 
             lcd.write(byte(2));
         } 
@@ -292,6 +328,7 @@ class LCDRenderer : public IRenderer {
         else {
             lcd.setCursor(0,0); 
             lcd.print("Press JOYSTICK");
+
             lcd.setCursor(0,1); 
             lcd.print("to RESTART ->");
         }
@@ -326,7 +363,11 @@ class GameController {
         // initializam eeprom-ul daca valorile sunt gunoi (prima rulare)
         for(int i=0; i<3; i++) {
             int val; EEPROM.get(i*2, val);
-            if(val < 0 || val > 30000) { int z=0; EEPROM.put(i*2, z); }
+
+            if(val < 0 || val > 30000) { 
+                int z=0; 
+                EEPROM.put(i*2, z); 
+            }
         }
     }
 
@@ -341,12 +382,15 @@ class GameController {
         if (newScore > scores[0]) { 
                 scores[2]=scores[1]; 
                 scores[1]=scores[0]; 
-                scores[0]=newScore; }
+                scores[0]=newScore; 
+                }
         else if (newScore > scores[1]) { 
             scores[2]=scores[1]; 
-            scores[1]=newScore; }
+            scores[1]=newScore; 
+            }
         else if (newScore > scores[2]) { 
-            scores[2]=newScore; }
+            scores[2]=newScore; 
+            }
             
         // scriu inapoi in memorie
         for(int i=0; i<3; i++) 
@@ -355,7 +399,7 @@ class GameController {
 
     void update() {
         unsigned long currentMillis = millis();
-        // citim starea butoanelor (active pe low)
+        // citesc starea butoanelor (active pe low)
         bool btnJoy = !digitalRead(PIN_JOY_BTN);
         bool btnPause = !digitalRead(PIN_BTN_PAUSE);
 
@@ -365,10 +409,12 @@ class GameController {
             if (btnPause && model->currentState == PLAYING) {
                 model->currentState = PAUSED;
                 playSound(500, 100); 
+
                 lastButtonPress = currentMillis;
             } else if (btnPause && model->currentState == PAUSED) {
                 model->currentState = PLAYING;
                 playSound(1000, 100); 
+
                 lastButtonPress = currentMillis;
             }
             // intrare in setari din meniu
@@ -376,6 +422,7 @@ class GameController {
                 model->currentState = SETTINGS;
                 model->settingsOption = 0;
                 playSound(800, 100); 
+
                 lastButtonPress = currentMillis;
             }
         }
@@ -390,30 +437,39 @@ class GameController {
             
             // daca e pauza nu fac update la logica, doar desenez ecranul de pauza
             if (model->currentState == PAUSED) { 
-                view->drawPause(); return; }
+                view->drawPause(); 
+                return; 
+            }
 
             // secventa audio-vizuala cand jucatorul pierde ("se indragosteste")
             if (model->currentState == LOVE_ANIMATION) {
                 unsigned long dt = currentMillis - model->animStartTime;
                 // sunete escalate in frecventa
-                if (dt < 150) tone(PIN_BUZZER, 523);
+                if (dt < 150) 
+                    tone(PIN_BUZZER, 523);
                 else if (dt < 300) 
-                tone(PIN_BUZZER, 659);
+                    tone(PIN_BUZZER, 659);
                 else if (dt < 450) 
-                tone(PIN_BUZZER, 784);
+                    tone(PIN_BUZZER, 784);
                 else if (dt < 1000) 
-                tone(PIN_BUZZER, 1046);
+                    tone(PIN_BUZZER, 1046);
                 else { 
                     noTone(PIN_BUZZER);
-                    model->currentState = GAMEOVER; } // trecem la game over
-                view->drawGame(*model); return; 
+                    model->currentState = GAMEOVER; 
+                    } // trecem la game over
+
+                view->drawGame(*model); 
+                
+                return; 
             }
             
             // afisarea ecranului about pentru 5 secunde sau pana se apasa un buton
             if (model->currentState == ABOUT) {
                 view->drawAbout();
+
                 if (currentMillis - model->aboutStartTime > 5000) 
                     model->currentState = MENU;
+
                 if ((btnJoy || btnPause) && (currentMillis - lastButtonPress > 500)) {
                      model->currentState = MENU; 
                      lastButtonPress = currentMillis;
@@ -432,8 +488,10 @@ class GameController {
                     // selectie stanga/dreapta bazata pe valorile analogice
                     if (joyX > 800) // valoare mare -> girl
                         model->selectedGirl = true;
+
                     if (joyX < 200) // valoare mica -> boy
                         model->selectedGirl = false;
+
                     view->drawSelectScreen(model->selectedGirl);
 
                     // confirmare selectie
@@ -441,14 +499,19 @@ class GameController {
                         view->loadCharacters(model->selectedGirl);
                         playSound(1000, 200);
                         model->currentState = MENU;
+
                         lastButtonPress = currentMillis;
                     }
                     break;
 
                 case MENU:
                     {
-                        // citim scorurile proaspat la fiecare frame (putea fi optimizat)
-                        int scores[3]; for(int i=0; i<3; i++) EEPROM.get(i*2, scores[i]);
+                        // citesc scorurile la fiecare frame 
+                        int scores[3]; 
+                        
+                        for(int i=0; i<3; i++) 
+                            EEPROM.get(i*2, scores[i]);
+
                         view->drawMenu(scores);
                     }
                     // start joc
@@ -465,6 +528,7 @@ class GameController {
                         if (currentMillis - resetTimer > 2000) {
                             lcd.clear();                
                             model->currentState = MENU; 
+
                             resetTimer = 0;             
                         }
                         //cat astept dau return ca sa nu se deseneze altceva peste mesaj
@@ -473,12 +537,14 @@ class GameController {
                     //DESENARE SI NAVIGARE
                     view->drawSettings(model->settingsOption);
 
-                    if (joyY < 200 || joyX > 800) model->settingsOption = 1; 
-                    if (joyY > 800 || joyX < 200) model->settingsOption = 0; 
+                    if (joyY < 200 || joyX > 800) 
+                        model->settingsOption = 1; 
+                    if (joyY > 800 || joyX < 200) 
+                        model->settingsOption = 0; 
 
                     if (btnJoy && (currentMillis - lastButtonPress > 500)) {
                         if (model->settingsOption == 0) {
-                            // --- RESET SCORE ---
+                            // RESET SCORE 
                             int zero = 0; for(int i=0; i<3; i++) EEPROM.put(i*2, zero);
                             tone(PIN_BUZZER, 200, 300); 
                             
@@ -536,6 +602,7 @@ class GameController {
              model->isJumping = true; 
              model->playerY = 0; // mutam jucatorul sus
              model->jumpStartTime = millis(); 
+
              playSound(600, 100);
         }
         // terminarea sariturii dupa 1.5 secunde (gravitatie simulata)
@@ -555,25 +622,31 @@ class GameController {
         // detectie coliziuni
         int pX = (int)model->playerX;
         int pY = (int)model->playerY;
+
         byte tile = model->mapData[pY][pX]; // ce se afla la picioarele jucatorului
 
         if (tile == 1) { // coliziune cu inamicul (baiatul/fata opus/a)
             model->won = false; 
+
             saveScore(model->score); // salvez scorul inainte de game over
+
             model->deathTime = millis(); 
             model->animStartTime = millis(); 
             model->currentState = LOVE_ANIMATION; // animatia de final
+
             lastButtonPress = millis();
         }
         else if (tile == 2) { // colectare inima
             model->score += 10; 
             model->mapData[pY][pX] = 0; // sterg inima de pe harta
+            
             playSound(2000, 50); // sunet scurt si ascutit
         }
         else if (tile == 3) { // ajuns la linia de finish
              model->score += 50; model->won = true; 
              saveScore(model->score); 
              model->currentState = GAMEOVER; 
+
              lastButtonPress = millis();
         }
     }
