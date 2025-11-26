@@ -10,6 +10,207 @@ Each homework includes the official requirements, source files, implementation d
 
 <br>
 
+## Homework 5 - LCD Platformer: Dangerous Love
+
+### Task Requirements
+
+Design and implement a side-scrolling platformer game on a 16x2 LCD display using **Clean Architecture** principles (Separation of Concerns). The system must utilize a **GameModel** for logic, a **GameController** for inputs/updates, and an **IRenderer** interface to decouple drawing logic from game state.
+
+The game features character selection, procedural map generation, jumping physics, score persistence (EEPROM), and a menu system.
+
+### Implemented Bonuses
+
+Am recitit cu atenție cerința (PDF-ul) și codul tău.
+
+Concluzie: Ai acoperit excelent punctele de la 5.4.5 (Bonus Ideas), dar ai omis un bonus tehnic foarte important menționat la secțiunea 5.6 Publishing task:
+
+"For bonus, include a short demo in Serial first, then LCD."
+
+Codul tău conține clasa SerialRenderer complet implementată și interfața IRenderer. Aceasta este o dovadă clară de Clean Architecture și ar trebui neapărat trecută la lista de Bonusuri (demonstrează că poți randa jocul și în consolă, nu doar pe LCD).
+
+Am adăugat acest punct ("Dual Rendering Architecture") în lista de bonusuri și am rafinat puțin descrierile existente ca să "puște" exact pe ce vrea asistentul.
+
+Iată varianta FINALĂ și COMPLETĂ a fișierului README.md. Dă copy-paste la tot blocul de cod de mai jos:
+
+Markdown
+
+## Homework 5 - LCD Platformer: Dangerous Love
+
+### Task Requirements
+
+Design and implement a side-scrolling platformer game on a 16x2 LCD display using **Clean Architecture** principles (Separation of Concerns). The system must utilize a **GameModel** for logic, a **GameController** for inputs/updates, and an **IRenderer** interface to decouple drawing logic from game state.
+
+The game features character selection, procedural map generation, jumping physics, score persistence (EEPROM), and a menu system.
+
+### 🏆 Implemented Bonuses
+
+This project implements multiple bonus features as described in the requirements (Sections 5.4.5 and 5.6):
+
+* **Clean Architecture & Dual Rendering (Section 5.6 Bonus):**
+    * Implemented a flexible **IRenderer interface**.
+    * Created two concrete renderers: `LCDRenderer` (for gameplay) and `SerialRenderer` (for debugging and game logic verification via Serial Monitor without a display). This strictly enforces the Separation of Concerns principle.
+
+* **Menu Complexity & About Section:**
+    * Implemented a nested **Settings Menu** accessible via the Pause button.
+    * Added an **About Section** displaying the creator's name and game info.
+    * The Main Menu is dynamic, cycling through 3 different titles (`~Dangerous Love~`, `~Run Run RUN!~`, `~Hearts Thief~`) to keep the UI active.
+
+* **Reset Highscore Option:**
+    * Included a functional "Reset Score" option within the Settings menu that clears the EEPROM memory (sets top scores to 0).
+
+* **Animations and Sound:**
+    * **Love Animation:** A dedicated cutscene when the player collides with the enemy (hearts appear, game pauses).
+    * **Audio Feedback:** Distinct sounds for Menu Navigation (Tick), Selection (Confirm), Jumping, and Collecting items.
+    * **Musical Sequence:** A rising scale melody plays during the "Love Animation" sequence.
+    * **Slide Transitions:** The Game Over screen is not static; it automatically cycles through slides (Message -> Score -> Instructions).
+
+* **Extra Logic & Game Complexity:**
+    * **Character Selection:** Added a pre-game state where the player selects their avatar (Boy or Girl). This logic fundamentally changes the sprites: the unselected character becomes the in-game enemy.
+    * **Camera Physics:** Implemented a "soft follow" camera that tracks the player smoothly (updates when player moves >8 tiles right or <2 tiles left) rather than jarring screen-flips.
+
+* **Creative Theme:**
+    * Instead of a standard "Death", the game over state is thematically integrated as "Falling in love" (colliding with the partner), turning a hazard into a narrative element.
+      
+### Components
+
+| Component | Quantity | Description |
+| :--- | :--- | :--- |
+| Arduino Uno | 1 | Microcontroller |
+| 16x2 LCD (HD44780) | 1 | Main display |
+| Joystick Module | 1 | X/Y Analog + Switch |
+| Push Button | 1 | Pause/Back function |
+| Passive Buzzer | 1 | Audio feedback |
+| Resistors | As needed | LCD contrast and current limiting |
+
+### Pin Map
+
+| Function | Arduino Pin | Notes |
+| :--- | :--- | :--- |
+| LCD RS | 8 | Register Select |
+| LCD EN | 9 | Enable |
+| LCD D4 | 4 | Data Pin 4 |
+| LCD D5 | 5 | Data Pin 5 |
+| LCD D6 | 6 | Data Pin 6 |
+| LCD D7 | 7 | Data Pin 7 |
+| Joystick X | A0 | Horizontal movement |
+| Joystick Y | A1 | Vertical movement (Menu) / Jump |
+| Joystick SW | 2 | Select / Start / Restart (Active LOW) |
+| Pause Button | 10 | Active LOW (Internal Pull-up) |
+| Buzzer | 3 | PWM Audio output |
+| Random Seed | A5 | Unconnected pin for entropy |
+
+### System Behavior Summary
+
+Upon booting, the game enters the **Character Selection** state (`< GIRL >` vs `< BOY >`). The choice determines the player sprite and the enemy sprite.
+
+In the **Idle/Menu** state, the display cycles through the top 3 high scores from EEPROM and the dynamic game titles.
+During the **Gameplay**, the player navigates a procedurally generated map (100 tiles). The camera implements a "soft follow" mechanic, scrolling the world when the character moves past the center.
+
+* **Objective:** Reach the finish line (Tile 100) while collecting Hearts.
+* **Hazards:** Colliding with the "partner" (enemy) triggers the **Love Animation** (a rising tone sequence + visual hearts), resulting in Game Over.
+
+The **Physics Engine** handles gravity. A jump moves the player to the top row for ~1.5 seconds before gravity pulls them back.
+
+The **Settings Menu** allows the user to reset stored scores or view credits. The **Pause** button can be used to pause the game or as a "Back" button in menus.
+
+### Controls
+
+| Action | Input | Description |
+| :--- | :--- | :--- |
+| Move Left/Right | Joystick LEFT / RIGHT | Moves character horizontally |
+| Jump | Joystick UP | Jumps to the top row (gravity applied) |
+| Menu Navigate | Joystick UP / DOWN | Select settings options |
+| Confirm / Start | Joystick Button (SW) | Confirm selection / Start Game |
+| Pause Game | Button (Pin 10) | Toggles Pause state |
+| Back | Button (Pin 10) | Return from Settings/About to Menu |
+| Reset Score | Joystick Button (SW) | Inside Settings -> Reset option |
+
+### Display Texts & UI
+
+* **Menu:** Cycles Highscores (`1st`, `2nd`, `3rd`) and Titles.
+* **Pause:** `!! PAUSED !!` / `Press to Resume`.
+* **Win Screen:** `Level Completed!` / `No toxic love`.
+* **Lose Screen:** `Game over! :(` / `You fell in love`.
+* **Settings:** `> Reset Score` / `> About Section`.
+
+### Buzzer Feedback
+
+The audio system uses non-blocking logic (`millis()`).
+
+| Event | Sound | Description |
+| :--- | :--- | :--- |
+| Menu Select | 1000 Hz (200ms) | Confirmation beep |
+| Jump | 600 Hz (100ms) | Upward movement sound |
+| Collect Heart | 2000 Hz (50ms) | High-pitch "coin" sound |
+| Pause | 500 Hz / 1000 Hz | Toggle sounds |
+| Settings Enter | 800 Hz (100ms) | Navigation sound |
+| **Love Animation** | Rising Scale | 523Hz -> 659Hz -> 784Hz -> 1046Hz sequence |
+
+### Custom Characters (Bitmaps)
+
+The game uses custom 5x8 bitmaps to render the entities.
+
+| Character | Binary Pattern (Concept) | Description |
+| :--- | :--- | :--- |
+| **Girl** | `0b10001, 0b01110...` | Player or Enemy depending on selection |
+| **Boy** | `0b01110, 0b01110...` | Player or Enemy depending on selection |
+| **Heart** | `0b00000, 0b01010...` | Collectible item (`<3`) |
+
+### Architecture & SoC
+
+The code follows the **Model-View-Controller (MVC)** pattern:
+
+1.  **GameModel:** Holds the state (player position `float x, y`, map data, score, state enums). It is completely decoupled from hardware.
+2.  **IRenderer (Interface):** An abstract class defining methods like `drawGame`, `drawMenu`.
+    * **LCDRenderer:** Concrete implementation for the 16x2 screen.
+    * **SerialRenderer:** Implementation for debugging via Serial Monitor.
+3.  **GameController:** Bridges Input and Model. Handles the game loop, timers (`millis`), physics calculations, and updates the view.
+
+### State Diagram
+
+The game logic flows through the following states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> SelectChar
+    SelectChar --> Menu : Confirm Selection
+    Menu --> Playing : Start Game
+    Menu --> Settings : Pause Button
+    Settings --> About : Select Option
+    Settings --> Menu : Back
+    Playing --> Paused : Pause Button
+    Paused --> Playing : Pause Button
+    Playing --> LoveAnimation : Collision
+    LoveAnimation --> GameOver : Animation End
+    Playing --> GameOver : Win
+    GameOver --> Menu : Joystick Click
+```
+
+### EEPROM Memory Map
+
+The top 3 high scores are stored in the EEPROM. If the values are invalid (garbage data), they are initialized to 0.
+
+| Address | Data | Description |
+| :--- | :--- | :--- |
+| 0x00 - 0x01 | `int` (2 bytes) | 1st Place Score |
+| 0x02 - 0x03 | `int` (2 bytes) | 2nd Place Score |
+| 0x04 - 0x05 | `int` (2 bytes) | 3rd Place Score |
+
+### Difficulty & Timing
+
+* **Update Rate:** Game logic ticks every **100ms**.
+* **Jump Physics:** Duration 1500ms (Gravity simulation).
+* **Map Size:** 100 tiles.
+* **Slideshow:** Results screen slides update every 2000ms.
+
+### Pictures of the Setup
+......
+
+### Video 
+......
+  
+<br>
+
 ## Homework 4 - Simon Says
 
 ### Task Requirements
@@ -129,7 +330,9 @@ Timing is handled entirely using millis() — no delay() calls are used anywhere
 
 The state machine below illustrates the logical flow of the Simon Says game.
 
-stateDiagram --> IdleMenu
+```mermaid
+stateDiagram-v2
+    [*] -->IdleMenu
     IdleMenu --> MenuAction : Select option
     MenuAction --> ShowSequence : Start game
     ShowSequence --> InputPhase : Time expired
@@ -139,6 +342,7 @@ stateDiagram --> IdleMenu
     ShowSequence --> Paused : Pause button
     InputPhase --> Paused : Pause button
     Paused --> IdleMenu : After 1.2s
+```
 
 ### Wiring Diagram
 
