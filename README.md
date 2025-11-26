@@ -25,9 +25,9 @@ The game features character selection, procedural map generation, jumping physic
 * **Floating Point Physics:** The player's X position is stored as a `float` (incremented by 0.5). This allows for smoother internal logic calculation, which is then cast to `int` for grid rendering.
 * **Camera Logic:** The camera window (16 chars) does not lock strictly to the player. It uses a "dead zone" approach: the camera only scrolls forward if the player moves past the 8th column relative to the screen, and scrolls back if the player retreats too close to the left edge.
 * **Smart Rendering:** The `drawGame` function iterates only through the 16 columns currently visible based on `cameraX`. It calculates the offset into the global `mapData` matrix, ensuring efficiency.
-* **Non-Blocking Audio:** All sounds are handled via `millis()`. The `playSound()` function sets a timestamp, and the main loop checks if the duration has elapsed to call `noTone()`, ensuring gameplay never freezes for sound.
-  
-### Implemented Bonuses
+* **Non-Blocking UI & Audio:** All sounds and delays are handled via `millis()`. For example, the "SCORE RESET!" message uses a state-based timer (`resetTimer`) to hold the message on screen for 2 seconds without using `delay()`, allowing the processor to continue running background tasks.
+
+### >>>>> Implemented Bonuses
 
 For this project I have implemented multiple bonus features as described in the requirements (Sections 5.4.5 and 5.6):
 
@@ -38,24 +38,24 @@ For this project I have implemented multiple bonus features as described in the 
 * **Menu Complexity & About Section:**
     * Implemented a nested **Settings Menu** accessible via the Pause button.
     * Added an **About Section** displaying the creator's name and game info.
-    * The Main Menu is dynamic, cycling through 3 different titles (`~Dangerous Love~`, `~Run Run RUN!~`, `~Hearts Thief~`) to keep the UI active.
+    * The Main Menu is dynamic, cycling through 4 different titles (`~Dangerous Love~`, `~ No FAKE love ~`, `~ Hearts Thief ~`, `~ Run FAST Run ~`) to keep the UI active.
 
 * **Reset Highscore Option:**
-    * Included a functional "Reset Score" option within the Settings menu that clears the EEPROM memory (sets top scores to 0).
+    * Included a functional "Reset Score" option within the Settings menu that clears the EEPROM memory (sets top scores to 0) and provides visual/audio feedback.
 
 * **Animations and Sound:**
     * **Love Animation:** A dedicated cutscene when the player collides with the enemy (hearts appear, game pauses).
-    * **Audio Feedback:** Distinct sounds for Menu Navigation (Tick), Selection (Confirm), Jumping, and Collecting items.
+    * **Audio Feedback:** Distinct sounds for Menu Navigation, Selection, Jumping, and Collecting items.
     * **Musical Sequence:** A rising scale melody plays during the "Love Animation" sequence.
     * **Slide Transitions:** The Game Over screen is not static; it automatically cycles through slides (Message -> Score -> Instructions).
 
 * **Extra Logic & Game Complexity:**
     * **Character Selection:** Added a pre-game state where the player selects their avatar (Boy or Girl). This logic fundamentally changes the sprites: the unselected character becomes the in-game enemy.
-    * **Camera Physics:** Implemented a "soft follow" camera that tracks the player smoothly (updates when player moves >8 tiles right or <2 tiles left) rather than jarring screen-flips.
+    * **Camera Physics:** Implemented a "soft follow" camera that tracks the player smoothly (updates when player moves >8 tiles right or <2 tiles left).
 
 * **Creative Theme:**
     * Instead of a standard "Death", the game over state is thematically integrated as "Falling in love" (colliding with the partner), turning a hazard into a narrative element.
-      
+
 ### Components
 
 | Component | Quantity | Description |
@@ -65,7 +65,8 @@ For this project I have implemented multiple bonus features as described in the 
 | Joystick Module | 1 | X/Y Analog + Switch |
 | Push Button | 1 | Pause/Back function |
 | Passive Buzzer | 1 | Audio feedback |
-| Resistors | As needed | LCD contrast and current limiting |
+| Potentiometer | 1 | LCD Contrast control (10kΩ) |
+| Resistors | As needed | Current limiting |
 
 ### Pin Map
 
@@ -117,6 +118,7 @@ The **Settings Menu** allows the user to reset stored scores or view credits. Th
 * **Win Screen:** `Level Completed!` / `No toxic love`.
 * **Lose Screen:** `Game over! :(` / `You fell in love`.
 * **Settings:** `> Reset Score` / `> About Section`.
+* **Reset:** `SCORE RESET!` (Visible for 2 seconds).
 
 ### Buzzer Feedback
 
@@ -189,10 +191,15 @@ The top 3 high scores are stored in the EEPROM. If the values are invalid (garba
 * **Slideshow:** Results screen slides update every 2000ms.
 
 ### Pictures of the Setup
-......
+
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/2b17bc0b-da4c-494a-99b9-0885da898cb6" height="400" />
+  <img src="https://github.com/user-attachments/assets/103cc81d-3809-4537-a90e-7032eddae4b3" height="300" />
+</p>
 
 ### Video 
-......
+
+https://www.youtube.com/watch?v=uY1ge7WyrSc
   
 <br>
 
