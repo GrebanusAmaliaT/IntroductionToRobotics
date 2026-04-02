@@ -1,7 +1,6 @@
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 
-/pinii pentru ecranul lcd si controalele analogice/digitale
 const int PIN_RS = 8, PIN_EN = 9, PIN_D4 = 4, PIN_D5 = 5, PIN_D6 = 6, PIN_D7 = 7;
 
 const int PIN_JOY_X = A0;
