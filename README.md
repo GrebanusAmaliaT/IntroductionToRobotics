@@ -356,7 +356,9 @@ https://youtube.com/shorts/KFcf_d8wKIo?feature=share
 - One buzzer (pin 6) that provides auditory cues during the pedestrian crossing phases.
 - A 7-segment display, connected through pins 7, 4, 11, 12, 13, A5, A4, and A3, which shows countdown values during the timed states.
 
-#### The program is structured as a finite state machine with four main states:
+<br>
+
+### The program is structured as a finite state machine with four main states:
 
 1. Idle State (Default)
 Cars: green, Pedestrians: red
@@ -384,9 +386,9 @@ Countdown shown on the display.
 Buzzer emits rapid beeps (~3 Hz) to warn that the crossing time is ending.
 After this state, the system automatically returns to Idle.
 
-All timing is managed using the millis() function to ensure non-blocking behavior. 
+- All timing is managed using the millis() function to ensure non-blocking behavior. 
 This allows accurate countdown display and real-time responsiveness to transitions. 
-The interrupt service routine (ISR) attached to the button pin detects falling edges, 
+- The interrupt service routine (ISR) attached to the button pin detects falling edges, 
 setting a flag to initiate the state sequence only if the system is in the Idle state.
 
 ### Code Structure and Style
