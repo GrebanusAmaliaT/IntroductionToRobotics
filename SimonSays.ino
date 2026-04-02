@@ -1,33 +1,33 @@
-bool inputLockFlag = false; //flag pentru blocarea inputului in anumite momente
+bool inputLockFlag = false; 
 
-const int pinLatch595   = 11; //pin pentru latch-ul 74HC595
-const int pinCeas595    = 10; //pin pentru clock-ul 74HC595
-const int pinDate595    = 12; //pin pentru datele 74HC595
+const int pinLatch595   = 11; 
+const int pinCeas595    = 10; 
+const int pinDate595    = 12; 
 
-const int numarCifreAfisaj = 4; //numarul de cifre pe afisajul 7 segmente
-const int piniCifre[numarCifreAfisaj] = {4, 5, 6, 7}; //pinii care selecteaza fiecare cifra
+const int numarCifreAfisaj = 4; 
+const int piniCifre[numarCifreAfisaj] = {4, 5, 6, 7}; 
 
-const int pinJoystickX  = A0; //pin analog pentru axa X a joystick-ului
-const int pinJoystickY  = A1; //pin analog pentru axa Y a joystick-ului
-const int pinJoystickSw = 8; //pin digital pentru butonul joystick-ului
+const int pinJoystickX  = A0; 
+const int pinJoystickY  = A1; 
+const int pinJoystickSw = 8; 
 
-const int joyLeftLimit = 300; //limita minima pentru miscarea spre stanga
-const int joyRightLimit = 700; //limita maxima pentru miscarea spre dreapta
-const unsigned long debounceMenuMs = 300; //timp de debounce pentru miscare in meniu
+const int joyLeftLimit = 300; 
+const int joyRightLimit = 700; 
+const unsigned long debounceMenuMs = 300; 
 
-unsigned long lastMenuMoveTime = 0; //timpul ultimei miscari in meniu
-unsigned long joyPressStartTime = 0; //timpul cand a inceput apasarea pe joystick
-const unsigned long joyLongPressTime = 800; //durata minima pentru o apasare lunga
+unsigned long lastMenuMoveTime = 0; 
+unsigned long joyPressStartTime = 0; 
+const unsigned long joyLongPressTime = 800; 
 
-const int pinButonPauza = 2; //pinul pentru butonul de pauza
-const int pinBuzzer     = 9; //pinul pentru buzzer
+const int pinButonPauza = 2; 
+const int pinBuzzer     = 9; 
 
-struct intrareFont { //structura pentru asocierea caracterelor cu modelul de segmente
+struct intrareFont { 
   char caracter;
   byte model;
 };
 
-const intrareFont font7seg[] = { //tabela de caractere pentru afisajul 7 segmente
+const intrareFont font7seg[] = { 
   {'0', 0b11111100}, 
   {'1', 0b01100000}, 
   {'2', 0b11011010},
@@ -53,9 +53,9 @@ const intrareFont font7seg[] = { //tabela de caractere pentru afisajul 7 segment
   {' ', 0b00000000}
 };
 
-const int fontCount = sizeof(font7seg) / sizeof(font7seg[0]); //numarul de intrari in font
+const int fontCount = sizeof(font7seg) / sizeof(font7seg[0]); 
 
-byte getCharPattern(char c) { //functie care returneaza modelul de segmente pentru un caracter
+byte getCharPattern(char c) { 
   for (int i = 0; i < fontCount; i++) {
     if (font7seg[i].caracter == c) 
       return font7seg[i].model;
@@ -63,29 +63,29 @@ byte getCharPattern(char c) { //functie care returneaza modelul de segmente pent
   return 0;
 }
 
-const bool enableSerialFeedback = true; //flag pentru activarea mesajelor in serial
+const bool enableSerialFeedback = true; 
 
-void printGameMessage(const String &msg) { //functie pentru printarea mesajelor jocului
+void printGameMessage(const String &msg) { 
   if (enableSerialFeedback) {
     Serial.println(msg);
   }
 }
 
-char displayChars[numarCifreAfisaj] = {' ', ' ', ' ', ' '}; //buffer pentru caracterele afisate
+char displayChars[numarCifreAfisaj] = {' ', ' ', ' ', ' '}; 
 
-enum blinkModeType { blinkModeNone, blinkModeFast, blinkModeSlow }; //moduri de clipire
+enum blinkModeType { blinkModeNone, blinkModeFast, blinkModeSlow }; 
 blinkModeType digitBlinkMode[numarCifreAfisaj] = {
   blinkModeNone, blinkModeNone, blinkModeNone, blinkModeNone
 };
 
-unsigned long lastMultiplexTime = 0; //timpul ultimei actualizari de multiplexare
-int currentDigitIndex = 0; //indexul cifrei curente afisate
+unsigned long lastMultiplexTime = 0; 
+int currentDigitIndex = 0; 
 
-const unsigned long multiplexIntervalMs = 2; //intervalul de multiplexare
-const unsigned long blinkFastIntervalMs = 125; //interval de clipire rapida
-const unsigned long blinkSlowIntervalMs = 500; //interval de clipire lenta
+const unsigned long multiplexIntervalMs = 2; 
+const unsigned long blinkFastIntervalMs = 125; 
+const unsigned long blinkSlowIntervalMs = 500; 
 
-enum gameStateType { //enum pentru starile jocului
+enum gameStateType { 
   gameStateIdleMenu,
   gameStateMenuAction,
   gameStateShowScoreMenu,
@@ -96,56 +96,56 @@ enum gameStateType { //enum pentru starile jocului
   gameStatePaused
 };
 
-gameStateType gameState = gameStateIdleMenu; //starea curenta a jocului
+gameStateType gameState = gameStateIdleMenu; 
 
-const int sequenceLength = 4; //lungimea secventei de memorat
-char sequenceChars[sequenceLength]; //buffer pentru secventa generata
-int inputDigits[sequenceLength]; //buffer pentru inputul jucatorului
-bool digitLocked[sequenceLength] = {false, false, false, false}; //flaguri pentru cifrele blocate
+const int sequenceLength = 4; 
+char sequenceChars[sequenceLength]; 
+int inputDigits[sequenceLength]; 
+bool digitLocked[sequenceLength] = {false, false, false, false}; 
 
-int activeDigitIndex = 0; //indexul cifrei active
-bool digitEditing = false; //flag pentru modul de editare
+int activeDigitIndex = 0; 
+bool digitEditing = false; 
 
-int currentScore = 0; //scorul curent
-int highScore = 0; //cel mai mare scor salvat
+int currentScore = 0; 
+int highScore = 0; 
 
-unsigned long sequenceDisplayTimeMs = 16000; //timpul de afisare al secventei initiale
-const unsigned long sequenceDisplayMinMs = 2000; //timpul minim al secventei
-const unsigned long sequenceDisplayStepMs = 4000; //pasul cu care scade timpul
+unsigned long sequenceDisplayTimeMs = 16000; 
+const unsigned long sequenceDisplayMinMs = 2000; 
+const unsigned long sequenceDisplayStepMs = 4000; 
 
-unsigned long stateStartTime = 0; //momentul de inceput al starii curente
-bool resultSuccessFlag = false; //flag daca raspunsul este corect
-bool gameInProgress = false; //flag daca jocul este in desfasurare
+unsigned long stateStartTime = 0; 
+bool resultSuccessFlag = false; 
+bool gameInProgress = false; 
 
-const int menuItemCount = 4; //numarul de optiuni din meniu
-int menuIndex = 0; //indexul curent din meniu
+const int menuItemCount = 4; 
+int menuIndex = 0; 
 
-enum menuActionType { menuActionNone, menuActionPlay, menuActionScore, menuActionStop, menuActionHelp}; //actiunile posibile
-menuActionType pendingMenuAction = menuActionNone; //actiunea curenta in asteptare
+enum menuActionType { menuActionNone, menuActionPlay, menuActionScore, menuActionStop, menuActionHelp}; 
+menuActionType pendingMenuAction = menuActionNone; 
 
-int joystickXDirection = 0, joystickYDirection = 0; //directii joystick
-int joystickXDirectionLast = 0, joystickYDirectionLast = 0; //directii anterioare
-bool joystickMoveLeftFlag, joystickMoveRightFlag, joystickMoveUpFlag, joystickMoveDownFlag; //flaguri pentru directii
-bool joystickShortPressFlag, joystickLongPressFlag; //flaguri pentru apasari scurte/lungi
+int joystickXDirection = 0, joystickYDirection = 0; 
+int joystickXDirectionLast = 0, joystickYDirectionLast = 0; 
+bool joystickMoveLeftFlag, joystickMoveRightFlag, joystickMoveUpFlag, joystickMoveDownFlag; 
+bool joystickShortPressFlag, joystickLongPressFlag; 
 
-bool joystickSwLastState = HIGH; //ultima stare a butonului joystick
-bool joystickSwPressed = false; //flag pentru apasare
-unsigned long joystickSwPressTime = 0; //timpul de apasare
-bool joystickSwLongPressFired = false; //flag daca s-a detectat apasare lunga
-const unsigned long joystickLongPressThresholdMs = 700; //pragul pentru apasare lunga
+bool joystickSwLastState = HIGH; 
+bool joystickSwPressed = false; 
+unsigned long joystickSwPressTime = 0; 
+bool joystickSwLongPressFired = false; 
+const unsigned long joystickLongPressThresholdMs = 700; 
 
-bool pauseButtonLastState = HIGH; //ultima stare a butonului de pauza
-unsigned long pauseButtonLastChangeTime = 0; //timpul ultimei schimbari
-const unsigned long pauseButtonDebounceMs = 200; //debounce pentru butonul de pauza
-bool pauseButtonPressedFlag = false; //flag daca s-a apasat pauza
+bool pauseButtonLastState = HIGH; 
+unsigned long pauseButtonLastChangeTime = 0; 
+const unsigned long pauseButtonDebounceMs = 200; 
+bool pauseButtonPressedFlag = false; 
 
-const int joystickLowThreshold  = 300; //limita inferioara pentru joystick
-const int joystickHighThreshold = 700; //limita superioara pentru joystick
+const int joystickLowThreshold  = 300; 
+const int joystickHighThreshold = 700; 
 
-bool buzzerActive = false; //flag daca buzzerul este activ
-unsigned long buzzerEndTime = 0; //momentul opririi buzzerului
+bool buzzerActive = false; 
+unsigned long buzzerEndTime = 0; 
 
-void startBuzzerTone(int freq, unsigned long dur) { //porneste sunetul
+void startBuzzerTone(int freq, unsigned long dur) { 
   tone(pinBuzzer, freq);
   buzzerActive = true;
   buzzerEndTime = millis() + dur;
@@ -154,40 +154,42 @@ void startBuzzerTone(int freq, unsigned long dur) { //porneste sunetul
 void stopBuzzerTone() { 
   noTone(pinBuzzer); 
   buzzerActive = false; 
-  } //opreste sunetul
+  } 
+
 void updateBuzzer() { 
   if (buzzerActive && millis() > buzzerEndTime) 
   stopBuzzerTone(); 
-} //actualizeaza starea buzzerului
+} 
 
 void playTickSound() { 
   startBuzzerTone(2000, 40); 
-  } //sunet scurt pentru miscare
+  } 
 
 void playClickSound() { 
   startBuzzerTone(1500, 80); 
-  } //sunet click
+  } 
 
 void playSuccessSound() { 
   startBuzzerTone(2200, 200); 
-  } //sunet succes
+  } 
 
 void playErrorSound() { 
-  startBuzzerTone(400, 400); } //sunet eroare
+  startBuzzerTone(400, 400); 
+} 
 
-void setSegments(byte pattern) { //trimite patternul catre afisaj
+void setSegments(byte pattern) { 
   digitalWrite(pinLatch595, LOW);
   shiftOut(pinDate595, pinCeas595, MSBFIRST, pattern);
   digitalWrite(pinLatch595, HIGH);
 }
 
-void enableDigit(int index) { //activeaza cifra dorita
+void enableDigit(int index) { 
   for (int i = 0; i < numarCifreAfisaj; i++) {
     digitalWrite(piniCifre[i], i == index ? LOW : HIGH);
   }
 }
 
-void updateDisplayMultiplex() { //actualizeaza afisajul multiplexat
+void updateDisplayMultiplex() { 
   unsigned long now = millis();
 
   if (now - lastMultiplexTime < multiplexIntervalMs) 
@@ -210,14 +212,14 @@ void updateDisplayMultiplex() { //actualizeaza afisajul multiplexat
   enableDigit(currentDigitIndex);
 }
 
-void setDisplayText(const char *txt4) { //seteaza textul pe afisaj
+void setDisplayText(const char *txt4) { 
   for (int i = 0; i < numarCifreAfisaj; i++) {
     displayChars[i] = txt4[i];
     digitBlinkMode[i] = blinkModeNone;
   }
 }
 
-void setDisplayNumber(int value) { //afiseaza un numar pe 4 cifre
+void setDisplayNumber(int value) { 
   if (value < 0) value = 0;
 
   if (value > 9999) value = 9999;
@@ -230,7 +232,7 @@ void setDisplayNumber(int value) { //afiseaza un numar pe 4 cifre
     digitBlinkMode[i] = blinkModeNone;
 }
 
-void updateInputBlinkModes() { //actualizeaza modul de clipire pentru cifre
+void updateInputBlinkModes() { 
   for (int i = 0; i < sequenceLength; i++) {
     if (digitEditing && i == activeDigitIndex)
       digitBlinkMode[i] = blinkModeFast;
@@ -241,10 +243,10 @@ void updateInputBlinkModes() { //actualizeaza modul de clipire pentru cifre
   }
 }
 
-const unsigned long debounceMoveMs = 250; //debounce pentru joystick
-unsigned long lastMoveTime = 0; //timp ultima miscare
+const unsigned long debounceMoveMs = 250; 
+unsigned long lastMoveTime = 0; 
 
-void updateJoystickDirection() { //citeste directiile joystickului
+void updateJoystickDirection() { 
   int xValue = analogRead(pinJoystickX);
   int yValue = analogRead(pinJoystickY);
   unsigned long now = millis();
@@ -272,96 +274,96 @@ void updateJoystickDirection() { //citeste directiile joystickului
     lastMoveTime = now;
   }
 }
-void updateJoystickButton() { //citeste starea butonului joystickului
 
-  bool sw = digitalRead(pinJoystickSw); //citire buton joystick
-  unsigned long now = millis(); //momentul curent
+void updateJoystickButton() { 
+  bool sw = digitalRead(pinJoystickSw); 
+  unsigned long now = millis(); 
 
-  if (sw != joystickSwLastState) { //daca s-a schimbat starea
+  if (sw != joystickSwLastState) { 
     joystickSwLastState = sw;
 
-    if (sw == LOW) { //apasat
+    if (sw == LOW) { 
       joystickSwPressed = true;
       joystickSwPressTime = now;
       joystickSwLongPressFired = false;
-    } else { //eliberat
+    } else { 
       if (joystickSwPressed && !joystickSwLongPressFired && now - joystickSwPressTime < joystickLongPressThresholdMs)
-        joystickShortPressFlag = true; //apasare scurta
+        joystickShortPressFlag = true; 
       joystickSwPressed = false;
     }
   }
 
   if (joystickSwPressed && !joystickSwLongPressFired && now - joystickSwPressTime >= joystickLongPressThresholdMs) {
-    joystickLongPressFlag = true; //apasare lunga detectata
+    joystickLongPressFlag = true; 
     joystickSwLongPressFired = true;
   }
 }
 
-void updatePauseButton() { //citeste butonul de pauza cu debounce
-  bool st = digitalRead(pinButonPauza); //citire stare
-  unsigned long now = millis(); //timp curent
+void updatePauseButton() { 
+  bool st = digitalRead(pinButonPauza); 
+  unsigned long now = millis(); 
 
   if (st != pauseButtonLastState && (now - pauseButtonLastChangeTime) > pauseButtonDebounceMs) {
-    pauseButtonLastChangeTime = now; //actualizare timp schimbare
-    pauseButtonLastState = st; //actualizare stare
+    pauseButtonLastChangeTime = now; 
+    pauseButtonLastState = st; 
 
     if (st == LOW) 
-    pauseButtonPressedFlag = true; //setare flag cand e apasat
+    pauseButtonPressedFlag = true; 
   }
 }
 
-void updateInputs() { //actualizeaza toate inputurile
-  updateJoystickDirection(); //citeste directiile joystickului
-  updateJoystickButton(); //citeste butonul joystickului
-  updatePauseButton(); //citeste butonul pauza
+void updateInputs() { 
+  updateJoystickDirection(); 
+  updateJoystickButton(); 
+  updatePauseButton(); 
 }
 
-void clearInputFlags() { //reseteaza toate flagurile inputurilor
+void clearInputFlags() { 
   joystickMoveLeftFlag = joystickMoveRightFlag = joystickMoveUpFlag = joystickMoveDownFlag = false;
   joystickShortPressFlag = joystickLongPressFlag = false;
   pauseButtonPressedFlag = false;
 }
 
-void startNewRound() { //porneste o noua runda de joc
+void startNewRound() { 
   for (int i = 0; i < sequenceLength; i++)
-    sequenceChars[i] = '0' + random(0, 10); //genereaza o secventa random de cifre
+    sequenceChars[i] = '0' + random(0, 10); 
 
-  setDisplayText(sequenceChars); //afiseaza secventa
-  stateStartTime = millis(); //salveaza momentul
-  gameState = gameStateShowSequence; //trece in starea de afisare
-  gameInProgress = true; //setare flag joc activ
+  setDisplayText(sequenceChars); 
+  stateStartTime = millis(); 
+  gameState = gameStateShowSequence; 
+  gameInProgress = true; 
 }
 
-void startNewGame() { //porneste un joc nou
-  pauseButtonPressedFlag = false; //reseteaza flagul de pauza
-  pauseButtonLastState = digitalRead(pinButonPauza); //sincronizeaza starea curenta
-  pauseButtonLastChangeTime = millis(); //actualizeaza timpul
+void startNewGame() { 
+  pauseButtonPressedFlag = false; 
+  pauseButtonLastState = digitalRead(pinButonPauza); 
+  pauseButtonLastChangeTime = millis(); 
 
-  currentScore = 0; //reseteaza scorul
-  sequenceDisplayTimeMs = 16000; //reseteaza timpul initial de afisare
-  startNewRound(); //incepe prima runda
+  currentScore = 0; 
+  sequenceDisplayTimeMs = 16000; 
+  startNewRound(); 
 }
 
-void enterInputPhase() { //trece in faza in care jucatorul introduce cifrele
+void enterInputPhase() { 
   for (int i = 0; i < sequenceLength; i++) {
     inputDigits[i] = 0;
     digitLocked[i] = false;
     displayChars[i] = '0';
   }
-  activeDigitIndex = 0; //selecteaza prima cifra
-  digitEditing = false; //nu este in mod editare
-  updateInputBlinkModes(); //actualizeaza clipirea
-  gameState = gameStateInputPhase; //trece in starea de input
+  activeDigitIndex = 0; 
+  digitEditing = false; 
+  updateInputBlinkModes(); 
+  gameState = gameStateInputPhase; 
 }
 
-void goToIdleMenu() { //revine in meniul principal
-  setDisplayText("PLAy"); //afiseaza PLAY
-  menuIndex = 0; //reset index meniu
-  gameState = gameStateIdleMenu; //seteaza starea meniu
-  gameInProgress = false; //nu e in joc
+void goToIdleMenu() { 
+  setDisplayText("PLAy"); 
+  menuIndex = 0; 
+  gameState = gameStateIdleMenu; 
+  gameInProgress = false; 
 }
 
-void updateStateIdleMenu() { //actualizeaza logica meniului principal
+void updateStateIdleMenu() { 
   if (menuIndex == 0) 
     setDisplayText("PLAy");
   else if (menuIndex == 1) 
@@ -371,14 +373,14 @@ void updateStateIdleMenu() { //actualizeaza logica meniului principal
   else 
     setDisplayText("HELP");
 
-  int xVal = analogRead(pinJoystickX); //citeste pozitia X a joystickului
+  int xVal = analogRead(pinJoystickX); 
   unsigned long now = millis();
 
   if (xVal < joyLeftLimit && now - lastMenuMoveTime > debounceMenuMs) {
     menuIndex--;
     if (menuIndex < 0) 
     menuIndex = menuItemCount - 1;
-    playTickSound(); //sunet miscare
+    playTickSound(); 
     lastMenuMoveTime = now;
   } else if (xVal > joyRightLimit && now - lastMenuMoveTime > debounceMenuMs) {
     menuIndex++;
@@ -389,7 +391,7 @@ void updateStateIdleMenu() { //actualizeaza logica meniului principal
     lastMenuMoveTime = now;
   }
 
-  bool sw = digitalRead(pinJoystickSw); //citeste buton joystick
+  bool sw = digitalRead(pinJoystickSw); 
   if (sw == LOW) {
     if (joyPressStartTime == 0) 
       joyPressStartTime = now; 
@@ -398,7 +400,7 @@ void updateStateIdleMenu() { //actualizeaza logica meniului principal
       unsigned long pressLen = now - joyPressStartTime;
       joyPressStartTime = 0;
 
-      if (pressLen >= joyLongPressTime) { //apasare lunga
+      if (pressLen >= joyLongPressTime) { 
         playClickSound();
 
         if (menuIndex == 0) {
@@ -420,7 +422,7 @@ void updateStateIdleMenu() { //actualizeaza logica meniului principal
 
         stateStartTime = millis();
         gameState = gameStateMenuAction;
-      } else { //apasare scurta
+      } else { 
         if (menuIndex == 1) {
           playClickSound();
           pendingMenuAction = menuActionScore;
@@ -439,7 +441,7 @@ void updateStateIdleMenu() { //actualizeaza logica meniului principal
   }
 }
 
-void updateStateMenuAction() { //executa actiunea selectata in meniu
+void updateStateMenuAction() { 
   if (millis() - stateStartTime >= 800) {
     if (pendingMenuAction == menuActionPlay) {
       printGameMessage("→ Starting new game...");
@@ -455,12 +457,12 @@ void updateStateMenuAction() { //executa actiunea selectata in meniu
       printGameMessage("→ Stopping game and returning to menu...");
       goToIdleMenu();
     }
-    else if (pendingMenuAction == menuActionHelp) { //afiseaza instructiuni in serial
+    else if (pendingMenuAction == menuActionHelp) { 
       printGameMessage("");
       printGameMessage(" HOW TO PLAY:");
       printGameMessage("------------------------");
       printGameMessage(" Goal: Memorize the digits shown briefly.");
-      printGameMessage("   Then re-enter them using the joystick.");
+      printGameMessage("    Then re-enter them using the joystick.");
       printGameMessage("");
       printGameMessage("Controls:");
       printGameMessage(" - Move LEFT / RIGHT: select digit position");
@@ -483,12 +485,12 @@ void updateStateMenuAction() { //executa actiunea selectata in meniu
   }
 }
 
-void updateStateShowScoreMenu() { //afiseaza scorul pentru 2 secunde apoi revine in meniu
+void updateStateShowScoreMenu() { 
   if (millis() - stateStartTime >= 2000) 
   goToIdleMenu();
 }
 
-void updateStateShowSequence() { //afiseaza secventa de memorat
+void updateStateShowSequence() { 
   unsigned long now = millis();
 
   if (now - stateStartTime < 800) {
@@ -509,7 +511,7 @@ void updateStateShowSequence() { //afiseaza secventa de memorat
   }
 }
 
-void updateStateInputPhase() { //gestioneaza inputul jucatorului
+void updateStateInputPhase() { 
 
   if (pauseButtonPressedFlag) { 
     setDisplayText("PAUS"); 
@@ -518,7 +520,7 @@ void updateStateInputPhase() { //gestioneaza inputul jucatorului
     return; 
     }
 
-  if (!digitEditing) { //navigare intre cifre
+  if (!digitEditing) { 
     if (joystickMoveLeftFlag) { 
       activeDigitIndex = (activeDigitIndex - 1 + sequenceLength) % sequenceLength; 
       playTickSound(); 
@@ -529,13 +531,13 @@ void updateStateInputPhase() { //gestioneaza inputul jucatorului
       }
   }
 
-  if (joystickShortPressFlag) { //comuta intre mod editare si navigare
+  if (joystickShortPressFlag) { 
     digitEditing = !digitEditing;
     digitLocked[activeDigitIndex] = !digitEditing;
     playClickSound();
   }
 
-  if (digitEditing) { //schimba valoarea cifrei active
+  if (digitEditing) { 
     if (joystickMoveUpFlag) { 
       inputDigits[activeDigitIndex] = (inputDigits[activeDigitIndex] + 1) % 10; playTickSound(); 
       }
@@ -549,17 +551,17 @@ void updateStateInputPhase() { //gestioneaza inputul jucatorului
   updateInputBlinkModes();
 
   if (joystickLongPressFlag) 
-  gameState = gameStateCheckAnswer; //apasare lunga confirma raspunsul
+  gameState = gameStateCheckAnswer; 
 }
 
-void updateStateCheckAnswer() { //verifica raspunsul jucatorului
+void updateStateCheckAnswer() { 
   bool correct = true;
 
   for (int i = 0; i < sequenceLength; i++)
     if ('0' + inputDigits[i] != sequenceChars[i]) correct = false;
 
   resultSuccessFlag = correct;
-  if (correct) { //daca e corect
+  if (correct) { 
     currentScore++;
     if (currentScore > highScore) 
     highScore = currentScore;
@@ -567,19 +569,19 @@ void updateStateCheckAnswer() { //verifica raspunsul jucatorului
 
     playSuccessSound();
     setDisplayNumber(currentScore);
-    printGameMessage("Correct! ✅ Starting next round...");
+    printGameMessage("Correct! Starting next round...");
 
-  } else { //gresit
+  } else { 
     playErrorSound();
     setDisplayText("Err ");
-    printGameMessage(" Wrong! ❌ END ROUND → Game lost.");
+    printGameMessage(" Wrong! END ROUND → Game lost.");
     printGameMessage("Your final score: " + String(currentScore));
   }
   stateStartTime = millis();
   gameState = gameStateResult;
 }
 
-void updateStateResult() { //gestioneaza rezultatul dupa verificare
+void updateStateResult() { 
   unsigned long now = millis();
 
   if (pauseButtonPressedFlag) { 
@@ -602,14 +604,14 @@ void updateStateResult() { //gestioneaza rezultatul dupa verificare
   }
 }
 
-void updateStatePaused() { //pauzeaza jocul temporar
+void updateStatePaused() { 
    if (millis() - stateStartTime >= 1200) {
     printGameMessage("Resuming to main menu...");
     goToIdleMenu();
   }
 }
 
-void setup() { //initializare pinii si afisajul
+void setup() { 
   pinMode(pinLatch595, OUTPUT);
   pinMode(pinCeas595, OUTPUT);
   pinMode(pinDate595, OUTPUT);
@@ -634,11 +636,11 @@ void setup() { //initializare pinii si afisajul
   printGameMessage("Current option: START GAME → press to play.");
 }
 
-void loop() { //bucla principala
-  updateInputs(); //citeste toate intrarile
-  updateBuzzer(); //actualizeaza buzzerul
+void loop() { 
+  updateInputs(); 
+  updateBuzzer(); 
 
-  switch (gameState) { //executa logica in functie de starea curenta
+  switch (gameState) { 
     case gameStateIdleMenu:       
     updateStateIdleMenu(); 
     break;
@@ -672,6 +674,6 @@ void loop() { //bucla principala
     break;
   }
 
-  updateDisplayMultiplex(); //actualizeaza afisajul
-  clearInputFlags(); //reseteaza flagurile inputurilor
+  updateDisplayMultiplex(); 
+  clearInputFlags(); 
 }
