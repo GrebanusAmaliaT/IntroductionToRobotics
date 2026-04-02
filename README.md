@@ -417,11 +417,8 @@ This project aimed to create an Arduino-based circuit and program to control an 
 
 ### Pictures of the setup
 <p float="left">
-  <img src="https://github.com/user-attachments/assets/0f9ed50d-454f-4ad5-b0aa-eea64735bf96" width="400" />
-  <br>
-  <img src="https://github.com/user-attachments/assets/fe00b1e4-353c-4bbe-9034-7f97eff80574" width="400" />
-  <br>
-  <img src="https://github.com/user-attachments/assets/8cd44f28-21f4-46c5-8f19-329ba0a78f0a" width="400" />
+  <img src="https://github.com/user-attachments/assets/fe00b1e4-353c-4bbe-9034-7f97eff80574" width="300" />
+  <img src="https://github.com/user-attachments/assets/8cd44f28-21f4-46c5-8f19-329ba0a78f0a" width="300" />
 </p>
 
 ### Video
